@@ -1,4 +1,4 @@
-# MailCraft — Minecraft-themed Gamified Gmail Cleanup Extension
+# MailCraft — Block game themed gamified Gmail cleanup extension
 ### Project Plan & Tech Stack
 
 ---
@@ -22,7 +22,7 @@ independently of Gmail itself.
 | Frontend–backend–database operation(s) | "Log cleanup action" flow: extension → Express API → Postgres → updated stats returned |
 | Dataset with 100+ items | `SenderCatalog` seeded with 100+ known bulk-mail/newsletter domains; `Achievements` seeded with 20–30 badges (can pad to 100 with tiered variants) |
 | New user registration | `/api/auth/register` endpoint + Register screen in the side panel |
-| Expected UI elements | Login, Register, Logout, Profile (avatar, level, stats, achievements grid) |
+| Expected UI elements | Login, Register, Logout, Profile (level, stats, achievements grid) |
 | Design aesthetics | Consistent Tailwind theme, custom color palette, Framer Motion micro-animations, iconography for achievements |
 | Dynamic & responsive | SPA-style side panel (no reloads), live-updating XP bar/streak counter, layout adapts to panel resize |
 
@@ -40,7 +40,7 @@ independently of Gmail itself.
    │                       │
    ▼                       ▼
 ┌────────────────┐   ┌───────────────────┐
-│  Gmail REST API │   │  Your Backend API │
+│  Gmail REST API │   │  Backend API │
 │ (direct, OAuth  │   │  (Node/Express)   │
 │  via chrome.    │   │                    │
 │  identity)      │   │  /auth/register    │
@@ -56,10 +56,10 @@ independently of Gmail itself.
                         └───────────────┘
 ```
 
-**Key principle:** Gmail data never touches your backend. The extension calls
+**Key principle:** Gmail data never touches the backend. The extension calls
 the Gmail API directly with a token from `chrome.identity.getAuthToken()`.
-Your backend only ever sees *derived* events ("user archived an email") and
-your own account data — not message content. This keeps you on the
+Backend only ever sees *derived* events ("user archived an email") and
+own account data — not message content. This keeps users on the
 unverified/testing OAuth tier (up to 100 test users, no CASA fee) while still
 using the real Gmail API.
 
@@ -86,7 +86,7 @@ using the real Gmail API.
 ## 5. Data Model (Postgres via Prisma)
 
 **User**
-- id, email, password_hash, display_name, avatar_url, created_at
+- id, username, password_hash, created_at
 
 **UserStats**
 - user_id (FK), xp, level, current_streak, longest_streak, last_active_date
@@ -97,10 +97,6 @@ using the real Gmail API.
 
 **UserAchievement**
 - user_id (FK), achievement_id (FK), unlocked_at
-
-**SenderCatalog** (seed dataset, 100+ rows)
-- id, domain, display_name, category (newsletter/marketing/social/etc.)
-- Used to power "suggested cleanup targets" and themed "boss battles"
 
 **ActionLog**
 - id, user_id (FK), action_type (archive/delete/label/unsubscribe), gmail_thread_id, xp_awarded, created_at
@@ -116,7 +112,6 @@ using the real Gmail API.
 | `/api/auth/login` | POST | Authenticate, issue JWT |
 | `/api/auth/logout` | POST | Invalidate session (client discards token; optional server-side blocklist) |
 | `/api/profile` | GET | Fetch stats, level, achievements |
-| `/api/profile` | PATCH | Update display name/avatar |
 | `/api/actions` | POST | Log a cleanup action, award XP, check achievement unlocks, update streak |
 | `/api/achievements` | GET | List all achievements + unlock status |
 | `/api/leaderboard` | GET | Ranked XP list among beta friend group |
@@ -125,22 +120,30 @@ using the real Gmail API.
 
 ## 7. UI Screens (Side Panel)
 
-1. **Login** — email/password fields, "Register" link
-2. **Register** — email, password, display name
+1. **Login** — username/password fields, "Register" link
+2. **Register** — username, password
 3. **Connect Gmail** — one-time OAuth consent via `chrome.identity`
 4. **Cleanup Game View** (main screen) — email queue, swipe/click actions, live XP bar, streak flame icon
-5. **Profile** — avatar, level, total XP, streak, achievement grid
-6. **Leaderboard** — friend group ranking
-7. **Settings** — logout, theme toggle, notification prefs
+5. **Profile** — level, total XP, streak, achievements grid
+6. **Leaderboard** — friend group rankings
+7. **Settings** — logout, delete account
 
 ---
 
-## 8. Gamification Mechanics (draft)
+## 8. Gamification Mechanics
 
-- **XP per action:** archive = 5xp, delete = 3xp, label = 4xp, unsubscribe = 15xp
-- **Streaks:** daily cleanup session maintains streak; missed day resets it
-- **Achievements:** tiered badges (Bronze/Silver/Gold) for volume, streak length, and "boss battles" (clearing all mail from a specific `SenderCatalog` domain)
-- **Levels:** XP thresholds unlock cosmetic side-panel themes
+- **XP per action:** archive = 2xp, delete = 1xp, unsubscribe = 5xp
+- **Streaks:** daily cleanup session maintains streak; missed day (24H no XP gain) resets it
+- **Achievements:** unlock achievements for lifetime emails cleaned, daily streaks, number cleaned per amount of time, etc.
+- **Levels:** XP thresholds (follows formula level = 10(log(xp)+9) unlock new character options
+- **High scores:** Set new personal high scores for most emails cleaned in a day
+- **End of day XP boosts:** can gain or lose XP at the end of each day (11:59pm) depending on # unread emails in inbox
+  - Each day with <=10 emails unread in inbox gains 50xp
+  - Each day with <=5 emails unread in inbox gains 100xp
+  - Each day with >10 emails unread in inbox loses 10xp
+  - Each day with >=50 emails unread loses 50xp
+- **Leaderboard:** add friends to see a leaderboard of most emails cleaned
+
 
 ---
 
@@ -171,11 +174,3 @@ using the real Gmail API.
 6. **Polish** — animations, theming, streaks, leaderboard
 7. **Friend beta** — add testers in Google Cloud Console, share unpacked build or unlisted listing
 
----
-
-## 11. Open Questions to Resolve Early
-
-- Exact XP curve / leveling formula
-- Whether streaks reset at midnight local time or a rolling 24h window
-- Avatar handling — uploaded image vs. generated/selectable icon set
-- Whether the leaderboard is global-to-beta-group or opt-in per user
