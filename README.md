@@ -1,4 +1,4 @@
-# MailCraft — Block game themed gamified Gmail cleanup extension
+# MailCraft — Block game themed inbox cleanup
 ### Project Plan & Tech Stack
 
 ---
@@ -69,7 +69,7 @@ using the real Gmail API.
 
 | Layer | Technology | Notes |
 |---|---|---|
-| Extension framework | Plasmo or WXT | Manifest V3 scaffolding, hot reload |
+| Extension framework | WXT | Manifest V3 scaffolding, hot reload |
 | UI | React + TypeScript + Tailwind CSS | Side panel + popup views |
 | Animation | Framer Motion | Level-ups, card swipes, streak effects |
 | State | Zustand | Local UI/game state |
@@ -166,7 +166,7 @@ using the real Gmail API.
 
 ## 10. Build Order / Milestones
 
-1. **Scaffold** — extension shell (Plasmo/WXT) + Express/Prisma backend skeleton
+1. **Scaffold** — extension shell (WXT) + Express/Prisma backend skeleton
 2. **Auth loop** — register/login/logout working end-to-end with JWT
 3. **Gmail connection** — OAuth via `chrome.identity`, fetch + list a batch of emails
 4. **Core loop** — archive/delete action → `/api/actions` → XP update → UI reflects it
