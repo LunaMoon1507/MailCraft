@@ -17,7 +17,7 @@ backend + database tracks each user's progress independently of Gmail itself.
 | Objective | How it's satisfied |
 |---|---|
 | User authentication | Self-built username/password auth (JWT + bcrypt) in the backend, separate from Google OAuth |
-| Dynamic database of user/item data | PostgreSQL: User, UserStats, Achievement, UserAchievement, ActionLog, SenderCatalog, Friendship, DailySnapshot tables |
+| Dynamic database of user/item data | PostgreSQL: User, UserStats, Achievement, UserAchievement, ActionLog, SenderCatalog, Friendship, DailySnapshot, Reward tables |
 | Frontend–backend–database operation(s) | "Log cleanup action" flow: extension → Express API → Postgres → updated stats returned |
 | Dataset with 100+ items | `SenderCatalog` seeded with 100+ known bulk-mail/newsletter domains (used to tag and prioritize the cleanup queue); `Achievement` seeded with 20–30 badges (can pad to 100 with tiered variants) |
 | New user registration | `/api/auth/register` endpoint + Register screen in the side panel |
@@ -240,8 +240,9 @@ Each app has a committed `.env.example` (the template) and a git-ignored
 - id, username (unique), password_hash, timezone (IANA, e.g. `America/New_York`), created_at
 
 **UserStats**
-- user_id (FK), xp, level, current_streak, longest_streak, last_active_date,
-  best_day_count, best_day_date
+- user_id (FK), xp, level, highest_level, current_streak, longest_streak,
+  last_active_date, best_day_count, best_day_date, equipped_reward_id (FK, nullable)
+- `highest_level` never decreases, so rewards stay unlocked even if XP drops
 
 **Achievement** (seed data, 20–30 base badges padded to 100 with tiers)
 - id, name, description, icon, criteria_type, criteria_value
@@ -256,6 +257,11 @@ Each app has a committed `.env.example` (the template) and a git-ignored
 - Unique constraint on (user_id, gmail_thread_id, action_type), so the same action
   can't earn XP twice
 - *Stores only metadata about the action, never email content*
+
+**Reward** (seed data, one per level)
+- id, level_required (unique), name, description, type (e.g. character, block
+  skin, title), icon
+- No per-user table: a reward is unlocked when `highest_level >= level_required`
 
 **SenderCatalog** (seed data, 100+ rows)
 - id, domain (unique), display_name, category (newsletter/promotions/social/notifications)
@@ -280,6 +286,8 @@ Each app has a committed `.env.example` (the template) and a git-ignored
 | `/api/profile` | GET | Fetch stats, level, achievements (also settles any unsettled days) |
 | `/api/actions` | POST | Log a cleanup action `{type, threadId, fromBulkSender}`, then award XP, check achievement unlocks, and update streak and high score. **The client never sends an XP amount.** |
 | `/api/achievements` | GET | List all achievements + unlock status |
+| `/api/rewards` | GET | List all level rewards + unlocked status + which one is equipped |
+| `/api/rewards/equipped` | PUT | Equip an unlocked reward `{rewardId}` (server rejects locked ones) |
 | `/api/senders` | GET | Bulk-sender catalog (cached by the extension to tag the queue) |
 | `/api/snapshots` | POST | Record end-of-day inbox unread count `{day, unreadCount}` |
 | `/api/friends` | GET / POST | List friends / send a friend request by username |
@@ -298,7 +306,9 @@ All routes except register/login require a valid JWT and are rate-limited per us
    again if Google asks the user to re-consent
 4. **Cleanup Game View** (main screen) — email queue (bulk senders tagged and
    sorted first), swipe/click actions, live XP bar, streak flame icon
-5. **Profile** — level, total XP, streak, best day, achievements grid
+5. **Profile** — level, total XP, streak, best day, achievements grid, and
+   rewards track (unlocked rewards, next reward and the level it needs; tap
+   an unlocked reward to equip it)
 6. **Leaderboard** — friend rankings, add friend by username, pending requests
 7. **Settings** — logout, disconnect Gmail, delete account
 
@@ -321,9 +331,17 @@ reports what happened.
   after every action from the `Achievement` table's `criteria_type` /
   `criteria_value`.
 - **Levels:** `level = floor(sqrt(xp / 10)) + 1`, which gives level 1 at 0 XP,
-  level 2 at 10 XP, level 4 at 90 XP and level 11 at 1,000 XP. Levels unlock
-  new character options. (Replaces `10(log(xp)+9)`, which gave level 90 at
+  level 2 at 10 XP, level 4 at 90 XP and level 11 at 1,000 XP. (Replaces `10(log(xp)+9)`, which gave level 90 at
   1 XP and was undefined at 0 XP.)
+- **Level rewards:** every level unlocks one new reward (a character, block
+  skin, title, etc.) from the `Reward` table. Nothing is spent: XP is only a
+  progress measure, and unlocking is automatic on level-up.
+  - Unlocks use `highest_level`, so a reward stays unlocked even if
+    end-of-day penalties later drop the user's XP and level.
+  - The user can equip one unlocked reward at a time; it shows on their
+    profile and leaderboard row.
+  - The `/api/actions` response reports any newly unlocked reward so the
+    side panel can play a level-up animation.
 - **High scores:** track personal best for most emails cleaned in a single day
   (`best_day_count`, `best_day_date`).
 - **End-of-day inbox bonus:** the XP change is based on the inbox's unread count at 11:59pm in
@@ -383,8 +401,9 @@ reports what happened.
 3. **Gmail connection**: OAuth via `chrome.identity`, fetch + list a batch of emails
 4. **Core loop**: archive/trash/label action → `/api/actions` → XP update → UI
    reflects it (with optimistic update + action outbox)
-5. **Profile + achievements**: seed `Achievement` and `SenderCatalog` data,
-   wire up unlock logic and bulk-sender tagging
+5. **Profile + achievements + rewards**: seed `Achievement`, `Reward` and
+   `SenderCatalog` data, wire up unlock logic, reward equipping and
+   bulk-sender tagging
 6. **Daily systems**: streaks in user time zone, high scores, end-of-day
    snapshot alarm + lazy settlement
 7. **Social + polish**: friends, leaderboard, animations, theming
@@ -411,4 +430,5 @@ reports what happened.
 | "Delete" = move to Trash; scopes reduced to `gmail.modify` | Permanent delete needs full-access scope; `gmail.readonly` was redundant |
 | Backend moved from JavaScript to TypeScript | One language across extension and backend; shared, type-checked API contracts |
 | Dropped `gmail.labels` scope | `gmail.modify` already covers creating and applying labels |
+| Level rewards: one reward per level, unlocked automatically, no spending | Spending XP would lower the level it's based on; `highest_level` keeps unlocks permanent |
 | Added `ActionOutbox` | Game keeps working while the backend is asleep or offline |
