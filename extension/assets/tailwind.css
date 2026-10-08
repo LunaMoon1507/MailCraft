@@ -1,0 +1,10 @@
+@import 'tailwindcss';
+
+/* MailCraft theme tokens. Extend these as the visual design firms up. */
+@theme {
+  --color-grass: #5d9b3a;
+  --color-dirt: #8b5a2b;
+  --color-stone: #7a7a7a;
+  --color-night: #1d1f24;
+  --font-pixel: ui-monospace, 'SF Mono', Menlo, monospace;
+}

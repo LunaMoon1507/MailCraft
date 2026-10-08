@@ -144,7 +144,14 @@ MailCraft/
 │   ├── .env.example        # copy to .env
 │   ├── tsconfig.json
 │   └── package.json
-└── extension/              # WXT + React side panel (to be scaffolded)
+└── extension/              # Chrome extension (WXT + React + TypeScript + Tailwind)
+    ├── entrypoints/
+    │   ├── background.ts   # service worker: opens side panel on icon click
+    │   └── sidepanel/      # side panel page (App.tsx)
+    ├── lib/api.ts          # backend client (base URL from WXT_API_URL)
+    ├── assets/tailwind.css # Tailwind + theme tokens
+    ├── .env.example        # copy to .env
+    └── wxt.config.ts       # manifest settings
 ```
 
 **Node version.** The repo pins Node 22 in `.nvmrc`. Use
@@ -176,6 +183,16 @@ nvm use
 cd express-backend
 npm run dev        # restarts on save → http://localhost:3000/api/health
 ```
+
+**Extension** (one-time: `cd extension && npm install && cp .env.example .env`):
+
+```bash
+cd path/to/MailCraft/extension
+npm run dev        # opens a Chrome window with the extension loaded
+```
+
+Click the MailCraft toolbar icon to open the side panel; with the backend
+running it shows "Connected". See `extension/README.md` for details.
 
 Other backend scripts: `npm run build` (compile to `dist/`), `npm start`
 (run the compiled build), `npm run typecheck` (type errors only).
