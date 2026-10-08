@@ -1,4 +1,42 @@
 # MailCraft — Block game themed inbox cleanup
+
+# Project Setup
+## Backend server
+Install Node.js if needed and install dependencies in the root and express-backend folders:
+
+```bash
+npm i
+cd express-backend
+npm i
+```
+
+### .env setup and installing dependencies
+In the root directory, create a .env file containing these contents
+```
+PORT=3000
+GOOGLE_CLIENT_ID={insert client id}
+GOOGLE_CLIENT_SECRET={insert client secret}
+GOOGLE_REDIRECT_URI=http://localhost:3000/oauth2callback
+API_KEY={insert API key}
+DIRECT_URL="postgresql://postgres.bgyxdmbomguuwcguazdj:[PASSWORD]@aws-1-us-west-2.pooler.supabase.com:5432/postgres"
+DATABASE_URL=postgresql://postgres.bgyxdmbomguuwcguazdj:[PASSWORD]@aws-1-us-west-2.pooler.supabase.com:5432/postgres
+```
+
+Also cd into the express-backend folder and create another .env with this (used for the prisma commands):
+```
+# Connect to Postgres via the shared session-mode pooler (used for migrations)
+DIRECT_URL="postgresql://postgres.bgyxdmbomguuwcguazdj:[INSERT PASSWORD HERE]@aws-1-us-west-2.pooler.supabase.com:5432/postgres"
+```
+
+Then, run `npx prisma generate` in the express-backend folder. Rerun after making migrations.
+
+## DB
+To get the schema, run `npx prisma db pull` in the express-backend folder
+To make database migrations after changing the schema, run `npx prisma migrate dev` in the express-backend folder
+
+## Running
+You can run `npm run start` in the root folder to start the Express server on port 3000.
+
 ### Project Plan & Tech Stack
 
 ---
