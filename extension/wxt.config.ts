@@ -18,6 +18,10 @@ export default defineConfig({
   manifest: {
     name: 'MailCraft',
     description: 'Turn inbox cleanup into a block-building game.',
+    // Public key that pins the extension ID to abnalcomdnkcdgmnplffokedaeabecgh on every machine.
+    // The Google OAuth client is tied to this ID. Not secret; do NOT regenerate
+    // (see README §9 "Extension ID & key").
+    key: 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1IoWSw7sGxKlHBoveamHw3ddcDB1UqDAu/9YE/X3XdIzoeHPTE1ATOBJJXCb3czA92ZO7yyk5NriCWGHItHekW98IY21VFhLufyoxOPfh/y1o7cNrHp2H4KxDnXJDwTTCQ4AheAqBSafRevLg/RxtVQeUly2mhhDdwIajVinMjElMkT4pQ2TpXbti+kCc8vvyL+btlxXncZe5uGnnCbLBHdTVThIYqylk6IrN2J1mKZDkAWOTn3xLclM/b8ltSuamEi4nHXleSZPBIhHBudduJVLi6lwfsZftO3neYpYbOlOIRMNzQjmJmxB3oUlp4fp6exJkwuaVIal82R9zseGiwIDAQAB',
     permissions: ['sidePanel'],
     // Lets extension pages call the API without CORS. Add the deployed
     // API origin here when the backend is hosted.

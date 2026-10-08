@@ -391,6 +391,38 @@ reports what happened.
   and `gmail.labels` are redundant with it. Avoid `mail.google.com` (full access); it isn't
   needed since "delete" means Trash.
 
+### Extension ID & key
+
+The extension ID is pinned to **`abnalcomdnkcdgmnplffokedaeabecgh`** by the public key in
+`extension/wxt.config.ts` (`manifest.key`). The Google Cloud "Chrome
+Extension" OAuth client is registered to this ID, so Gmail sign-in only works
+for builds that keep it.
+
+- **Teammates don't generate anything.** Pull the repo, load the extension
+  unpacked, and it gets the same ID automatically. Check it on the MailCraft
+  card in `chrome://extensions`.
+- **Never replace or remove `manifest.key`.** A new key means a new ID, and
+  Gmail sign-in breaks for everyone until the OAuth client is updated.
+- **If your ID doesn't match:** remove MailCraft in `chrome://extensions`
+  and Load unpacked again. A plain reload doesn't pick up a new ID.
+- **The private key** (`mailcraft-key.pem`) was generated once, is
+  git-ignored (`*.pem`), and is kept in the team password manager. Unpacked
+  builds don't need it; nobody else needs a copy.
+- **Chrome Web Store:** the store assigns its own ID, so an Unlisted listing
+  needs a second "Chrome Extension" OAuth client for that ID.
+
+How the key was made (for reference only; don't rerun unless the team
+agrees to change the ID and update the OAuth client):
+
+```bash
+cd extension
+openssl genrsa 2048 | openssl pkcs8 -topk8 -nocrypt -out mailcraft-key.pem
+# public key for manifest.key
+openssl rsa -in mailcraft-key.pem -pubout -outform DER | openssl base64 -A; echo
+# extension ID
+openssl rsa -in mailcraft-key.pem -pubout -outform DER | shasum -a 256 | head -c32 | tr 0-9a-f a-p; echo
+```
+
 ---
 
 ## 10. Build Order / Milestones
