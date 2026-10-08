@@ -1,16 +1,28 @@
 {
-  "name": "express-backend",
+  "name": "mailcraft-backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "MailCraft API: auth and game data (Express + TypeScript)",
+  "private": true,
+  "type": "module",
+  "main": "dist/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit"
   },
-  "keywords": [],
-  "author": "",
+  "engines": {
+    "node": ">=20"
+  },
   "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
+    "dotenv": "^17.2.3",
     "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.18.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
   }
 }

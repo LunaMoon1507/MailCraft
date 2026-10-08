@@ -7,9 +7,8 @@
 
 A Chrome extension (side panel UI) that turns inbox cleanup into a game. Users
 authenticate with the app, connect their Gmail account, and earn XP, streaks,
-and achievements for archiving, deleting, labeling, and unsubscribing from
-clutter. A lightweight backend + database tracks each user's progress
-independently of Gmail itself.
+and achievements for archiving, trashing, and labeling clutter. A lightweight
+backend + database tracks each user's progress independently of Gmail itself.
 
 ---
 
@@ -17,10 +16,10 @@ independently of Gmail itself.
 
 | Objective | How it's satisfied |
 |---|---|
-| User authentication | Self-built email/password auth (JWT + bcrypt) in the backend, separate from Google OAuth |
-| Dynamic database of user/item data | PostgreSQL: Users, UserStats, Achievements, SenderCatalog, UserAchievements, ActionLog tables |
+| User authentication | Self-built username/password auth (JWT + bcrypt) in the backend, separate from Google OAuth |
+| Dynamic database of user/item data | PostgreSQL: User, UserStats, Achievement, UserAchievement, ActionLog, SenderCatalog, Friendship, DailySnapshot, Reward tables |
 | Frontend–backend–database operation(s) | "Log cleanup action" flow: extension → Express API → Postgres → updated stats returned |
-| Dataset with 100+ items | `SenderCatalog` seeded with 100+ known bulk-mail/newsletter domains; `Achievements` seeded with 20–30 badges (can pad to 100 with tiered variants) |
+| Dataset with 100+ items | `SenderCatalog` seeded with 100+ known bulk-mail/newsletter domains (used to tag and prioritize the cleanup queue); `Achievement` seeded with 20–30 badges (can pad to 100 with tiered variants) |
 | New user registration | `/api/auth/register` endpoint + Register screen in the side panel |
 | Expected UI elements | Login, Register, Logout, Profile (level, stats, achievements grid) |
 | Design aesthetics | Consistent Tailwind theme, custom color palette, Framer Motion micro-animations, iconography for achievements |
@@ -28,40 +27,87 @@ independently of Gmail itself.
 
 ---
 
-## 3. Architecture Overview
+## 3. Architecture
+
+### 3.1 Architectural pattern
+
+**Client–server system, with an MVC-style client, a layered monolithic
+backend, and a shared database.**
+
+| Part | Pattern | Why |
+|---|---|---|
+| Whole system | Client–server | Many clients (each tester's extension) operate on one shared database, which the leaderboard and friends features depend on. The split also keeps Gmail data off the server. |
+| Chrome extension | MVC-style | React screens = View, Zustand stores = Model, hooks + service modules = Controller. |
+| Backend | Layered monolith | One Express deployable split into API → business logic → data access → database. Each layer only calls the layer directly below it. Game rules are testable without HTTP or SQL. |
+| Data | Shared database | One PostgreSQL database accessed through Prisma. Simple to maintain and fast; no cross-database consistency work. |
+
+Microservices were considered and rejected. With 7 endpoint groups, one small
+team, and free-tier hosting that sleeps, they would add cold starts, network
+hops, and multiple databases to keep consistent, without any benefit at this
+scale.
+
+### 3.2 Layers
+
+| Tier | Layer | Responsibility |
+|---|---|---|
+| Client | Presentation (View) | Screens, animations, layout. No business rules. |
+| Client | State (Model) | Session, XP/level/streak, email queue. Optimistic updates. |
+| Client | Client services (Controller) | All I/O: `ApiClient`, `GmailService`, `IdentityService`, `StorageService`, `SenderTagger`, `ActionOutbox` |
+| Client | Background service worker | `chrome.alarms` end-of-day inbox snapshot, token refresh, messaging |
+| Server | API | Express routers + middleware (JWT verify, validation, rate limit, CORS) |
+| Server | Business logic | `AuthService`, `FriendService`, `LeaderboardService`, `GameEngine` (XP, level, streak, achievements, high scores, daily settlement) |
+| Server | Data access | Prisma Client, repositories, migrations, seed scripts |
+| Data | Database | PostgreSQL |
+
+### 3.3 Overview diagram
 
 ```
-┌─────────────────────────────┐
-│   Chrome Extension (React)  │
-│  Side Panel UI + Animations │
-└─────────────┬────────────────┘
-              │
-   ┌──────────┴───────────┐
-   │                       │
-   ▼                       ▼
-┌────────────────┐   ┌───────────────────┐
-│  Gmail REST API │   │  Backend API │
-│ (direct, OAuth  │   │  (Node/Express)   │
-│  via chrome.    │   │                    │
-│  identity)      │   │  /auth/register    │
-│                 │   │  /auth/login        │
-│ archive/delete/ │   │  /profile           │
-│ search/label    │   │  /actions (log XP)  │
-└────────────────┘   │  /leaderboard        │
-                      └─────────┬────────────┘
-                                ▼
-                        ┌───────────────┐
-                        │  PostgreSQL    │
-                        │  (Prisma ORM)  │
-                        └───────────────┘
+┌──────────────────────────────────────────┐
+│  CLIENT TIER · Chrome Extension (React)  │
+│  View:       Side panel screens + UI kit │
+│  Model:      Zustand stores              │
+│  Controller: Services + hooks            │
+│  Background: service worker (alarms)     │
+└──────┬───────────────────────────┬───────┘
+       │                           │  HTTPS · JSON · JWT
+       │  OAuth token              │  (derived events only)
+       ▼                           ▼
+┌────────────────────┐   ┌──────────────────────────┐
+│  Gmail REST API    │   │  SERVER TIER             │
+│  (direct, OAuth    │   │  Node/Express monolith   │
+│  via chrome.       │   │  ┌────────────────────┐  │
+│  identity)         │   │  │ API layer (routes) │  │
+│                    │   │  ├────────────────────┤  │
+│ threads / modify / │   │  │ Business logic     │  │
+│ trash / labels     │   │  │ (GameEngine, Auth) │  │
+└────────────────────┘   │  ├────────────────────┤  │
+                         │  │ Data access(Prisma)│  │
+                         │  └─────────┬──────────┘  │
+                         └────────────┼─────────────┘
+                                      ▼
+                             ┌─────────────────┐
+                             │   PostgreSQL    │
+                             │ (shared DB)     │
+                             └─────────────────┘
 ```
 
 **Key principle:** Gmail data never touches the backend. The extension calls
 the Gmail API directly with a token from `chrome.identity.getAuthToken()`.
-Backend only ever sees *derived* events ("user archived an email") and
-own account data — not message content. This keeps users on the
-unverified/testing OAuth tier (up to 100 test users, no CASA fee) while still
-using the real Gmail API.
+The backend only ever sees *derived* events ("user archived thread X") and one
+number per day (the inbox unread count at 11:59pm), never message content. This keeps
+users on the unverified/testing OAuth tier (up to 100 test users, no CASA fee)
+while still using the real Gmail API.
+
+### 3.4 Reliability rules
+
+- **Offline / sleeping backend:** the free-tier host can sleep, so the
+  extension queues cleanup actions in an `ActionOutbox` (in
+  `chrome.storage.local`) and syncs them when the API responds. Gmail
+  actions never wait on the backend.
+- **No server-side timers:** nothing depends on the server being awake at a
+  given time. End-of-day bonuses are settled lazily (see §8).
+- **MV3 service worker:** can be stopped at any time, so scheduled client
+  work uses `chrome.alarms`, not `setTimeout`/`setInterval`.
 
 ---
 
@@ -69,38 +115,163 @@ using the real Gmail API.
 
 | Layer | Technology | Notes |
 |---|---|---|
+| Language | TypeScript (strict) everywhere | Extension and backend share one language, so API request/response types can be shared |
 | Extension framework | WXT | Manifest V3 scaffolding, hot reload |
 | UI | React + TypeScript + Tailwind CSS | Side panel + popup views |
 | Animation | Framer Motion | Level-ups, card swipes, streak effects |
 | State | Zustand | Local UI/game state |
-| Local persistence | `chrome.storage.local` | Cache profile/session token |
+| Local persistence | `chrome.storage.local` | Cache profile, session token, action outbox |
+| Scheduling (client) | `chrome.alarms` | 11:59pm inbox snapshot |
 | Gmail access | Gmail REST API + `chrome.identity` | Client-side OAuth, no server involvement |
-| Backend | Node.js + Express | REST API for auth & game data |
-| ORM | Prisma | Type-safe DB access, migrations |
+| Backend | Node.js + Express + TypeScript | REST API for auth & game data. ES modules; `tsx` for dev, `tsc` for builds |
+| Validation / abuse | zod + express-rate-limit | Request validation, per-user rate limits |
+| ORM | Prisma | Type-safe DB access, migrations, seed scripts |
 | Database | PostgreSQL (Neon or Supabase free tier) | Persistent, real relational DB |
 | Auth | JWT (access token) + bcrypt (password hashing) | Self-implemented, not a third-party auth provider |
 | Hosting (beta) | Render or Fly.io free tier | Zero cost for a small friend group |
+
+### 4.1 Repository layout & running locally
+
+```
+MailCraft/
+├── .nvmrc                  # pinned Node version
+├── express-backend/        # API server (TypeScript)
+│   ├── src/
+│   │   ├── server.ts       # entry point: starts listening
+│   │   ├── config/env.ts   # loads and checks .env
+│   │   ├── app.ts          # builds the Express app (importable by tests)
+│   │   └── routes/         # API layer (services/, repositories/ to come)
+│   ├── .env.example        # copy to .env
+│   ├── tsconfig.json
+│   └── package.json
+└── extension/              # Chrome extension (WXT + React + TypeScript + Tailwind)
+    ├── entrypoints/
+    │   ├── background.ts   # service worker: opens side panel on icon click
+    │   └── sidepanel/      # side panel page (App.tsx)
+    ├── lib/api.ts          # backend client (base URL from WXT_API_URL)
+    ├── assets/tailwind.css # Tailwind + theme tokens
+    ├── .env.example        # copy to .env
+    └── wxt.config.ts       # manifest settings
+```
+
+**Node version.** The repo pins Node 22 in `.nvmrc`. Use
+[nvm](https://github.com/nvm-sh/nvm) so everyone runs the same version (the
+Node equivalent of a Python virtual environment; packages already install
+per-project into `node_modules/`).
+
+**One-time setup (macOS):**
+
+```bash
+# 1. Install nvm, then open a new terminal window
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+
+# 2. Install and select the project's Node version (reads .nvmrc)
+cd path/to/MailCraft
+nvm install
+
+# 3. Install backend packages and create your env file
+cd express-backend
+npm install
+cp .env.example .env   # then fill in the values (see §4.2)
+```
+
+**Every time:**
+
+```bash
+cd path/to/MailCraft
+nvm use
+cd express-backend
+npm run dev        # restarts on save → http://localhost:3000/api/health
+```
+
+**Extension** (one-time: `cd extension && npm install && cp .env.example .env`):
+
+```bash
+cd path/to/MailCraft/extension
+npm run dev        # dev server on :3100 (backend keeps :3000), opens Chrome with the extension
+```
+
+Click the MailCraft toolbar icon to open the side panel; with the backend
+running it shows "Connected". See `extension/README.md` for details.
+
+Other backend scripts: `npm run build` (compile to `dist/`), `npm start`
+(run the compiled build), `npm run typecheck` (type errors only).
+
+Environment variables: see §4.2.
+
+Because the backend uses ES modules with `NodeNext` resolution, relative
+imports in `.ts` files end in `.js` (e.g. `import { createApp } from './app.js'`).
+TypeScript resolves them to the `.ts` source.
+
+### 4.2 Environment files & getting your keys
+
+Each app has a committed `.env.example` (the template) and a git-ignored
+`.env` (your real values). New developers run `cp .env.example .env` in
+`express-backend/` and `extension/`, then fill in the values below.
+
+| Variable | File | Secret? | Where to get it |
+|---|---|---|---|
+| `DATABASE_URL`, `DIRECT_URL` | `express-backend/.env` | **Yes** | Ask to be invited to the Supabase project, then copy them from Project Settings → Database → Connection string (pooled for `DATABASE_URL`, direct/session for `DIRECT_URL`) |
+| `JWT_SECRET` | `express-backend/.env` | **Yes** | Generate your own for local dev: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
+| `PORT`, `JWT_EXPIRES_IN` | `express-backend/.env` | No | Defaults in the example are fine |
+| `WXT_API_URL` | `extension/.env` | No | `http://localhost:3000` locally; the hosted API URL later |
+| `WXT_GOOGLE_CLIENT_ID` | `extension/.env` | No (ships in the manifest) | Ask to be added to the Google Cloud project, then APIs & Services → Credentials → the "Chrome Extension" OAuth client |
+
+**Rules for secrets**
+
+- Never commit a `.env`, and never put real values in a `.env.example`,
+  the README, or code.
+- Prefer **access over sharing**: invite teammates to Supabase and Google
+  Cloud so they copy values themselves, instead of passing passwords around.
+- If a secret must be passed directly, use a shared password-manager vault
+  (e.g. Bitwarden or 1Password), not Discord, Slack, email, or a shared doc.
+- The hosted backend gets its own `JWT_SECRET` and database values through
+  the host's environment settings (Render/Fly dashboard), not a file.
+- If a secret leaks (committed, pasted in chat, shared too widely), rotate
+  it: reset the Supabase database password or generate a new `JWT_SECRET`.
+- Keep the repo in a normal folder (e.g. `~/code/MailCraft`), not a shared
+  cloud-drive folder, where `.env` files would sync to everyone with access.
 
 ---
 
 ## 5. Data Model (Postgres via Prisma)
 
 **User**
-- id, username, password_hash, created_at
+- id, username (unique), password_hash, timezone (IANA, e.g. `America/New_York`), created_at
 
 **UserStats**
-- user_id (FK), xp, level, current_streak, longest_streak, last_active_date
+- user_id (FK), xp, level, highest_level, current_streak, longest_streak,
+  last_active_date, best_day_count, best_day_date, equipped_reward_id (FK, nullable)
+- `highest_level` never decreases, so rewards stay unlocked even if XP drops
 
-**Achievement** (seed data, 100+ rows)
+**Achievement** (seed data, 20–30 base badges padded to 100 with tiers)
 - id, name, description, icon, criteria_type, criteria_value
-- *(e.g., "Archive 50 emails", "3-day streak", "Unsubscribe from 10 senders")*
+- *(e.g., "Archive 50 emails", "3-day streak", "Clear 100 emails from bulk senders")*
 
 **UserAchievement**
 - user_id (FK), achievement_id (FK), unlocked_at
 
 **ActionLog**
-- id, user_id (FK), action_type (archive/delete/label/unsubscribe), gmail_thread_id, xp_awarded, created_at
+- id, user_id (FK), action_type (archive/trash/label), gmail_thread_id,
+  from_bulk_sender (bool), xp_awarded, created_at
+- Unique constraint on (user_id, gmail_thread_id, action_type), so the same action
+  can't earn XP twice
 - *Stores only metadata about the action, never email content*
+
+**Reward** (seed data, one per level)
+- id, level_required (unique), name, description, type (e.g. character, block
+  skin, title), icon
+- No per-user table: a reward is unlocked when `highest_level >= level_required`
+
+**SenderCatalog** (seed data, 100+ rows)
+- id, domain (unique), display_name, category (newsletter/promotions/social/notifications)
+
+**Friendship**
+- requester_id (FK), addressee_id (FK), status (pending/accepted), created_at
+
+**DailySnapshot**
+- user_id (FK), day (date, user's time zone), unread_count, settled (bool), xp_delta
+- Unique on (user_id, day)
 
 ---
 
@@ -108,42 +279,97 @@ using the real Gmail API.
 
 | Endpoint | Method | Purpose |
 |---|---|---|
-| `/api/auth/register` | POST | Create new user account |
+| `/api/auth/register` | POST | Create new user account (username, password, timezone) |
 | `/api/auth/login` | POST | Authenticate, issue JWT |
 | `/api/auth/logout` | POST | Invalidate session (client discards token; optional server-side blocklist) |
-| `/api/profile` | GET | Fetch stats, level, achievements |
-| `/api/actions` | POST | Log a cleanup action, award XP, check achievement unlocks, update streak |
+| `/api/account` | DELETE | Delete account and all related rows (cascading delete) |
+| `/api/profile` | GET | Fetch stats, level, achievements (also settles any unsettled days) |
+| `/api/actions` | POST | Log a cleanup action `{type, threadId, fromBulkSender}`, then award XP, check achievement unlocks, and update streak and high score. **The client never sends an XP amount.** |
 | `/api/achievements` | GET | List all achievements + unlock status |
-| `/api/leaderboard` | GET | Ranked XP list among beta friend group |
+| `/api/rewards` | GET | List all level rewards + unlocked status + which one is equipped |
+| `/api/rewards/equipped` | PUT | Equip an unlocked reward `{rewardId}` (server rejects locked ones) |
+| `/api/senders` | GET | Bulk-sender catalog (cached by the extension to tag the queue) |
+| `/api/snapshots` | POST | Record end-of-day inbox unread count `{day, unreadCount}` |
+| `/api/friends` | GET / POST | List friends / send a friend request by username |
+| `/api/friends/:id` | PATCH / DELETE | Accept a request / remove a friend |
+| `/api/leaderboard` | GET | Ranked list of the user + accepted friends |
+
+All routes except register/login require a valid JWT and are rate-limited per user.
 
 ---
 
 ## 7. UI Screens (Side Panel)
 
 1. **Login** — username/password fields, "Register" link
-2. **Register** — username, password
-3. **Connect Gmail** — one-time OAuth consent via `chrome.identity`
-4. **Cleanup Game View** (main screen) — email queue, swipe/click actions, live XP bar, streak flame icon
-5. **Profile** — level, total XP, streak, achievements grid
-6. **Leaderboard** — friend group rankings
-7. **Settings** — logout, delete account
+2. **Register** — username, password (time zone detected automatically)
+3. **Connect Gmail** — one-time OAuth consent via `chrome.identity`; also shown
+   again if Google asks the user to re-consent
+4. **Cleanup Game View** (main screen) — email queue (bulk senders tagged and
+   sorted first), swipe/click actions, live XP bar, streak flame icon
+5. **Profile** — level, total XP, streak, best day, achievements grid, and
+   rewards track (unlocked rewards, next reward and the level it needs; tap
+   an unlocked reward to equip it)
+6. **Leaderboard** — friend rankings, add friend by username, pending requests
+7. **Settings** — logout, disconnect Gmail, delete account
 
 ---
 
 ## 8. Gamification Mechanics
 
-- **XP per action:** archive = 2xp, delete = 1xp, unsubscribe = 5xp
-- **Streaks:** daily cleanup session maintains streak; missed day (24H no XP gain) resets it
-- **Achievements:** unlock achievements for lifetime emails cleaned, daily streaks, number cleaned per amount of time, etc.
-- **Levels:** XP thresholds (follows formula level = 10(log(xp)+9) unlock new character options
-- **High scores:** Set new personal high scores for most emails cleaned in a day
-- **End of day XP boosts:** can gain or lose XP at the end of each day (11:59pm) depending on # unread emails in inbox
-  - Each day with <=10 emails unread in inbox gains 50xp
-  - Each day with <=5 emails unread in inbox gains 100xp
-  - Each day with >10 emails unread in inbox loses 10xp
-  - Each day with >=50 emails unread loses 50xp
-- **Leaderboard:** add friends to see a leaderboard of most emails cleaned
+All XP is calculated **on the server** by the `GameEngine`. The client only
+reports what happened.
 
+- **XP per action:** archive = 2xp, trash = 1xp, label = 1xp
+  - "Delete" in the UI moves the thread to Gmail Trash (recoverable for 30
+    days). Permanent deletion would require the full `mail.google.com` scope.
+- **Streaks:** a streak day is a **calendar day in the user's time zone** with at
+  least one XP-earning action. Missing a full calendar day resets
+  `current_streak` to 0. (Replaces the earlier "24H with no XP gain" rule,
+  which conflicted with the daily-session rule.)
+- **Achievements:** unlock achievements for lifetime emails cleaned, daily streaks,
+  number cleaned per amount of time, bulk-sender emails cleared, etc. Evaluated
+  after every action from the `Achievement` table's `criteria_type` /
+  `criteria_value`.
+- **Levels:** `level = floor(sqrt(xp / 10)) + 1`, which gives level 1 at 0 XP,
+  level 2 at 10 XP, level 4 at 90 XP and level 11 at 1,000 XP. (Replaces `10(log(xp)+9)`, which gave level 90 at
+  1 XP and was undefined at 0 XP.)
+- **Level rewards:** every level unlocks one new reward (a character, block
+  skin, title, etc.) from the `Reward` table. Nothing is spent: XP is only a
+  progress measure, and unlocking is automatic on level-up.
+  - Unlocks use `highest_level`, so a reward stays unlocked even if
+    end-of-day penalties later drop the user's XP and level.
+  - The user can equip one unlocked reward at a time; it shows on their
+    profile and leaderboard row.
+  - The `/api/actions` response reports any newly unlocked reward so the
+    side panel can play a level-up animation.
+- **High scores:** track personal best for most emails cleaned in a single day
+  (`best_day_count`, `best_day_date`).
+- **End-of-day inbox bonus:** the XP change is based on the inbox's unread count at 11:59pm in
+  the user's time zone. The tiers don't overlap:
+
+  | Unread in inbox | XP change |
+  |---|---|
+  | 0–5 | +100 |
+  | 6–10 | +50 |
+  | 11–49 | −10 |
+  | 50+ | −50 |
+
+  - **How it works:** the extension's service worker fires a `chrome.alarms`
+    alarm at 11:59pm, reads the INBOX label's unread count from Gmail, and
+    posts it to `/api/snapshots`. On the next authenticated request after
+    midnight, `DailySettlement` applies the XP change for any unsettled days
+    and marks them settled. The server never needs to be awake at 11:59pm.
+  - **No snapshot** (browser closed at 11:59pm): no XP change for that day.
+  - XP never drops below 0.
+- **Leaderboard:** add friends by username; the leaderboard ranks you and your
+  accepted friends by emails cleaned.
+
+### 8.1 Anti-cheat (friend-beta level)
+- Server computes XP from `action_type`; the client cannot send an XP amount.
+- Unique (user_id, gmail_thread_id, action_type) constraint prevents replaying
+  the same action.
+- Per-user rate limit on `/api/actions` (e.g. 60 requests/minute).
+- One snapshot per user per day (unique constraint).
 
 ---
 
@@ -151,26 +377,58 @@ using the real Gmail API.
 
 - Register a Google Cloud project, enable the Gmail API, set OAuth consent
   screen to **Testing** mode.
-- Add your friends' Google accounts as **test users** (up to 100) — this
+- Add your friends' Google accounts as **test users** (up to 100). This
   avoids Google's app verification and the CASA security assessment entirely.
+- Testing-mode apps may ask users to re-consent periodically; the Connect
+  Gmail screen handles this.
 - For beta distribution, share the extension as an **unpacked build**
   (friends load it via `chrome://extensions` → Developer Mode → Load
   Unpacked), or publish **Unlisted** on the Chrome Web Store. Neither path
-  requires Gmail-scope verification — that requirement is tied to OAuth
+  requires Gmail-scope verification. That requirement is tied to OAuth
   consent screen status, not extension distribution method.
-- Required Gmail scopes: `gmail.readonly`, `gmail.modify` (covers archive/
-  label), `gmail.labels`. Avoid requesting `mail.google.com` (full access) —
-  it's unnecessary for this use case.
+- Required Gmail scope: **`gmail.modify` only**. It covers reading, archiving
+  (removing the INBOX label), labeling, and moving to Trash. `gmail.readonly`
+  and `gmail.labels` are redundant with it. Avoid `mail.google.com` (full access); it isn't
+  needed since "delete" means Trash.
 
 ---
 
 ## 10. Build Order / Milestones
 
-1. **Scaffold** — extension shell (WXT) + Express/Prisma backend skeleton
-2. **Auth loop** — register/login/logout working end-to-end with JWT
-3. **Gmail connection** — OAuth via `chrome.identity`, fetch + list a batch of emails
-4. **Core loop** — archive/delete action → `/api/actions` → XP update → UI reflects it
-5. **Profile + achievements** — seed `Achievement` and `SenderCatalog` data, wire up unlock logic
-6. **Polish** — animations, theming, streaks, leaderboard
-7. **Friend beta** — add testers in Google Cloud Console, share unpacked build or unlisted listing
+1. **Scaffold**: extension shell (WXT) + Express/Prisma backend skeleton with
+   the layered folder structure (`routes/`, `services/`, `repositories/`), both in TypeScript
+2. **Auth loop**: register/login/logout/delete account working end-to-end with JWT
+3. **Gmail connection**: OAuth via `chrome.identity`, fetch + list a batch of emails
+4. **Core loop**: archive/trash/label action → `/api/actions` → XP update → UI
+   reflects it (with optimistic update + action outbox)
+5. **Profile + achievements + rewards**: seed `Achievement`, `Reward` and
+   `SenderCatalog` data, wire up unlock logic, reward equipping and
+   bulk-sender tagging
+6. **Daily systems**: streaks in user time zone, high scores, end-of-day
+   snapshot alarm + lazy settlement
+7. **Social + polish**: friends, leaderboard, animations, theming
+8. **Friend beta**: add testers in Google Cloud Console, share unpacked build
+   or unlisted listing
 
+---
+
+## 11. Design Change Log
+
+| Change | Reason |
+|---|---|
+| Named the architecture pattern (§3.1) | Client–server + MVC client + layered monolith + shared DB |
+| Removed unsubscribe feature | Gmail API has no unsubscribe endpoint. It would need `List-Unsubscribe` parsing plus extra host permissions or `gmail.send` |
+| Repurposed `SenderCatalog` | Still the 100+ item dataset; now tags and prioritizes bulk mail in the cleanup queue |
+| Added `DailySnapshot` + `/api/snapshots` + lazy settlement | End-of-day bonus needs the unread count, which the backend never sees; free-tier host may be asleep at 11:59pm |
+| Made the end-of-day tiers non-overlapping | The old ≤10 / ≤5 and >10 / ≥50 rules overlapped |
+| Replaced level formula | `10(log(xp)+9)` gave level 90 at 1 XP and was undefined at 0 XP |
+| Server-side XP + unique constraint + rate limit | Client-reported actions could be faked or replayed |
+| Added `Friendship` + `/api/friends` | Leaderboard promised "add friends" with no supporting table/endpoint |
+| Streaks use calendar days in user time zone; added `User.timezone` | "Missed day" and "24H no XP" rules conflicted |
+| Added label XP value (1xp) | Label was a listed action with no XP value |
+| Added `DELETE /api/account` | Settings screen had "delete account" with no endpoint |
+| "Delete" = move to Trash; scopes reduced to `gmail.modify` | Permanent delete needs full-access scope; `gmail.readonly` was redundant |
+| Backend moved from JavaScript to TypeScript | One language across extension and backend; shared, type-checked API contracts |
+| Dropped `gmail.labels` scope | `gmail.modify` already covers creating and applying labels |
+| Level rewards: one reward per level, unlocked automatically, no spending | Spending XP would lower the level it's based on; `highest_level` keeps unlocks permanent |
+| Added `ActionOutbox` | Game keeps working while the backend is asleep or offline |
