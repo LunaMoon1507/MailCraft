@@ -115,6 +115,7 @@ while still using the real Gmail API.
 
 | Layer | Technology | Notes |
 |---|---|---|
+| Language | TypeScript (strict) everywhere | Extension and backend share one language, so API request/response types can be shared |
 | Extension framework | WXT | Manifest V3 scaffolding, hot reload |
 | UI | React + TypeScript + Tailwind CSS | Side panel + popup views |
 | Animation | Framer Motion | Level-ups, card swipes, streak effects |
@@ -122,12 +123,71 @@ while still using the real Gmail API.
 | Local persistence | `chrome.storage.local` | Cache profile, session token, action outbox |
 | Scheduling (client) | `chrome.alarms` | 11:59pm inbox snapshot |
 | Gmail access | Gmail REST API + `chrome.identity` | Client-side OAuth, no server involvement |
-| Backend | Node.js + Express | REST API for auth & game data |
+| Backend | Node.js + Express + TypeScript | REST API for auth & game data. ES modules; `tsx` for dev, `tsc` for builds |
 | Validation / abuse | zod + express-rate-limit | Request validation, per-user rate limits |
 | ORM | Prisma | Type-safe DB access, migrations, seed scripts |
 | Database | PostgreSQL (Neon or Supabase free tier) | Persistent, real relational DB |
 | Auth | JWT (access token) + bcrypt (password hashing) | Self-implemented, not a third-party auth provider |
 | Hosting (beta) | Render or Fly.io free tier | Zero cost for a small friend group |
+
+### 4.1 Repository layout & running locally
+
+```
+MailCraft/
+├── .nvmrc                  # pinned Node version
+├── express-backend/        # API server (TypeScript)
+│   ├── src/
+│   │   ├── server.ts       # entry point: starts listening
+│   │   ├── config/env.ts   # loads and checks .env
+│   │   ├── app.ts          # builds the Express app (importable by tests)
+│   │   └── routes/         # API layer (services/, repositories/ to come)
+│   ├── .env.example        # copy to .env
+│   ├── tsconfig.json
+│   └── package.json
+└── extension/              # WXT + React side panel (to be scaffolded)
+```
+
+**Node version.** The repo pins Node 22 in `.nvmrc`. Use
+[nvm](https://github.com/nvm-sh/nvm) so everyone runs the same version (the
+Node equivalent of a Python virtual environment; packages already install
+per-project into `node_modules/`).
+
+**One-time setup (macOS):**
+
+```bash
+# 1. Install nvm, then open a new terminal window
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+
+# 2. Install and select the project's Node version (reads .nvmrc)
+cd path/to/MailCraft
+nvm install
+
+# 3. Install backend packages and create your env file
+cd express-backend
+npm install
+cp .env.example .env   # then fill in the real values (ask a teammate)
+```
+
+**Every time:**
+
+```bash
+cd path/to/MailCraft
+nvm use
+cd express-backend
+npm run dev        # restarts on save → http://localhost:3000/api/health
+```
+
+Other backend scripts: `npm run build` (compile to `dist/`), `npm start`
+(run the compiled build), `npm run typecheck` (type errors only).
+
+**Environment files.** Each app reads its own `.env`, which is git-ignored.
+`express-backend/.env.example` lists every variable the backend needs; the
+server exits at startup with a clear message if one is missing
+(`src/config/env.ts`).
+
+Because the backend uses ES modules with `NodeNext` resolution, relative
+imports in `.ts` files end in `.js` (e.g. `import { createApp } from './app.js'`).
+TypeScript resolves them to the `.ts` source.
 
 ---
 
@@ -267,7 +327,7 @@ reports what happened.
   consent screen status, not extension distribution method.
 - Required Gmail scope: **`gmail.modify` only**. It covers reading, archiving
   (removing the INBOX label), labeling, and moving to Trash. `gmail.readonly`
-  is redundant with it. Avoid `mail.google.com` (full access); it isn't
+  and `gmail.labels` are redundant with it. Avoid `mail.google.com` (full access); it isn't
   needed since "delete" means Trash.
 
 ---
@@ -275,7 +335,7 @@ reports what happened.
 ## 10. Build Order / Milestones
 
 1. **Scaffold**: extension shell (WXT) + Express/Prisma backend skeleton with
-   the layered folder structure (`routes/`, `services/`, `repositories/`)
+   the layered folder structure (`routes/`, `services/`, `repositories/`), both in TypeScript
 2. **Auth loop**: register/login/logout/delete account working end-to-end with JWT
 3. **Gmail connection**: OAuth via `chrome.identity`, fetch + list a batch of emails
 4. **Core loop**: archive/trash/label action → `/api/actions` → XP update → UI
@@ -306,4 +366,6 @@ reports what happened.
 | Added label XP value (1xp) | Label was a listed action with no XP value |
 | Added `DELETE /api/account` | Settings screen had "delete account" with no endpoint |
 | "Delete" = move to Trash; scopes reduced to `gmail.modify` | Permanent delete needs full-access scope; `gmail.readonly` was redundant |
+| Backend moved from JavaScript to TypeScript | One language across extension and backend; shared, type-checked API contracts |
+| Dropped `gmail.labels` scope | `gmail.modify` already covers creating and applying labels |
 | Added `ActionOutbox` | Game keeps working while the backend is asleep or offline |
