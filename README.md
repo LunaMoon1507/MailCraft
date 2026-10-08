@@ -172,7 +172,7 @@ nvm install
 # 3. Install backend packages and create your env file
 cd express-backend
 npm install
-cp .env.example .env   # then fill in the real values (ask a teammate)
+cp .env.example .env   # then fill in the values (see §4.2)
 ```
 
 **Every time:**
@@ -188,7 +188,7 @@ npm run dev        # restarts on save → http://localhost:3000/api/health
 
 ```bash
 cd path/to/MailCraft/extension
-npm run dev        # opens a Chrome window with the extension loaded
+npm run dev        # dev server on :3100 (backend keeps :3000), opens Chrome with the extension
 ```
 
 Click the MailCraft toolbar icon to open the side panel; with the backend
@@ -197,14 +197,40 @@ running it shows "Connected". See `extension/README.md` for details.
 Other backend scripts: `npm run build` (compile to `dist/`), `npm start`
 (run the compiled build), `npm run typecheck` (type errors only).
 
-**Environment files.** Each app reads its own `.env`, which is git-ignored.
-`express-backend/.env.example` lists every variable the backend needs; the
-server exits at startup with a clear message if one is missing
-(`src/config/env.ts`).
+Environment variables: see §4.2.
 
 Because the backend uses ES modules with `NodeNext` resolution, relative
 imports in `.ts` files end in `.js` (e.g. `import { createApp } from './app.js'`).
 TypeScript resolves them to the `.ts` source.
+
+### 4.2 Environment files & getting your keys
+
+Each app has a committed `.env.example` (the template) and a git-ignored
+`.env` (your real values). New developers run `cp .env.example .env` in
+`express-backend/` and `extension/`, then fill in the values below.
+
+| Variable | File | Secret? | Where to get it |
+|---|---|---|---|
+| `DATABASE_URL`, `DIRECT_URL` | `express-backend/.env` | **Yes** | Ask to be invited to the Supabase project, then copy them from Project Settings → Database → Connection string (pooled for `DATABASE_URL`, direct/session for `DIRECT_URL`) |
+| `JWT_SECRET` | `express-backend/.env` | **Yes** | Generate your own for local dev: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
+| `PORT`, `JWT_EXPIRES_IN` | `express-backend/.env` | No | Defaults in the example are fine |
+| `WXT_API_URL` | `extension/.env` | No | `http://localhost:3000` locally; the hosted API URL later |
+| `WXT_GOOGLE_CLIENT_ID` | `extension/.env` | No (ships in the manifest) | Ask to be added to the Google Cloud project, then APIs & Services → Credentials → the "Chrome Extension" OAuth client |
+
+**Rules for secrets**
+
+- Never commit a `.env`, and never put real values in a `.env.example`,
+  the README, or code.
+- Prefer **access over sharing**: invite teammates to Supabase and Google
+  Cloud so they copy values themselves, instead of passing passwords around.
+- If a secret must be passed directly, use a shared password-manager vault
+  (e.g. Bitwarden or 1Password), not Discord, Slack, email, or a shared doc.
+- The hosted backend gets its own `JWT_SECRET` and database values through
+  the host's environment settings (Render/Fly dashboard), not a file.
+- If a secret leaks (committed, pasted in chat, shared too widely), rotate
+  it: reset the Supabase database password or generate a new `JWT_SECRET`.
+- Keep the repo in a normal folder (e.g. `~/code/MailCraft`), not a shared
+  cloud-drive folder, where `.env` files would sync to everyone with access.
 
 ---
 
