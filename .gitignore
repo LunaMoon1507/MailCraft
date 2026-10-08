@@ -1,1 +1,4 @@
-express-backend/node_modules/
+node_modules/
+.env
+dist/
+express-backend/generated/prisma/
