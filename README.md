@@ -169,10 +169,12 @@ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
 # 2. Install and select the project's Node version (reads .nvmrc)
 nvm install
 
-# 3. Install backend packages and create your env file
+# 3. Install backend packages and create your env file, and run prisma pull/generate to get the database files.
 cd express-backend
 npm install
 cp .env.example .env   # then fill in the values (see §4.2)
+npx prisma db pull
+npx prisma db generate
 ```
 
 **Every time (from MailCraft project root):**
@@ -181,6 +183,8 @@ cp .env.example .env   # then fill in the values (see §4.2)
 nvm use
 cd express-backend
 npm run dev        # restarts on save → http://localhost:3000/api/health
+
+# http://localhost:3000/api/users -> go to this to test if the database connection worked
 ```
 
 **Extension** (one-time: `cd extension && npm install && cp .env.example .env`):
@@ -235,8 +239,8 @@ Each app has a committed `.env.example` (the template) and a git-ignored
 
 ## 5. Data Model (Postgres via Prisma)
 
-**User**
-- id, username (unique), password_hash, timezone (IANA, e.g. `America/New_York`), created_at
+**Users**
+- id, username (unique), email (unique), password_hash, timezone (IANA, e.g. `America/New_York`), created_at
 
 **UserStats**
 - user_id (FK), xp, level, highest_level, current_streak, longest_streak,

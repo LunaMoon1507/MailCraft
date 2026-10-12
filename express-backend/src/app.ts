@@ -1,12 +1,13 @@
 import express from 'express';
 import { healthRouter } from './routes/health.js';
+import { users } from './routes/users.js';
 
-// Builds the Express app without starting a server, so tests can import it.
 export function createApp() {
   const app = express();
   app.use(express.json());
 
   app.use('/api/health', healthRouter);
+  app.use('/api/users', users);
 
   return app;
 }
