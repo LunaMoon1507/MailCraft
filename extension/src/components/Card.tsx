@@ -13,7 +13,7 @@ const variants = {
 export default function Card({ variant, children, ...props }: CardProps) {
     const combinedStyles = `${baseStyles} ${variants[variant]}`
     return (
-        <div className={combinedStyles}>
+        <div className={combinedStyles} {...props}>
             {children}
         </div>
     )

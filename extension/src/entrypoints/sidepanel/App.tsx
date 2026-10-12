@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { API_URL, getHealth } from '@/lib/api';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
+import Login from '@/pages/Login';
 
 type Status =
   | { kind: 'checking' }
@@ -62,6 +63,7 @@ export default function App() {
         )}
         <Button variant='primary' size='sm' onClick={()=> void check()} disabled={status.kind==='checking'}>Check again</Button>
       </Card>
+      <Login/>
     </main>
   );
 }
