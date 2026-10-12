@@ -159,14 +159,14 @@ MailCraft/
 Node equivalent of a Python virtual environment; packages already install
 per-project into `node_modules/`).
 
-**One-time setup (macOS):**
+**One-time setup (macOS), from MailCraft root folder
+:**
 
 ```bash
 # 1. Install nvm, then open a new terminal window
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
 
 # 2. Install and select the project's Node version (reads .nvmrc)
-cd path/to/MailCraft
 nvm install
 
 # 3. Install backend packages and create your env file
@@ -175,10 +175,9 @@ npm install
 cp .env.example .env   # then fill in the values (see §4.2)
 ```
 
-**Every time:**
+**Every time (from MailCraft project root):**
 
 ```bash
-cd path/to/MailCraft
 nvm use
 cd express-backend
 npm run dev        # restarts on save → http://localhost:3000/api/health
@@ -187,7 +186,7 @@ npm run dev        # restarts on save → http://localhost:3000/api/health
 **Extension** (one-time: `cd extension && npm install && cp .env.example .env`):
 
 ```bash
-cd path/to/MailCraft/extension
+cd extension
 npm run dev        # dev server on :3100 (backend keeps :3000), opens Chrome with the extension
 ```
 
