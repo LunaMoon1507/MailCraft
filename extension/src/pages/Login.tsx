@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { API_URL, getHealth } from '@/lib/api';
+import { login, register } from '@/lib/auth';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
 import TextInput from '@/components/TextInput';
@@ -11,11 +11,45 @@ export default function Login () {
     const [usernameError, setUsernameError] = useState("");
     const [passwordError, setPasswordError] = useState("");
 
-    const handleLogin = () => {
-        console.log("Login Clicked");
+    async function handleLogin() {
+        try {
+            await login(username, password);
+        }
+        catch (error) {
+            if (error instanceof Error) {
+                setPasswordError(error.message);
+            } else {
+                setPasswordError("An unexpected error occurred.");
+            }
+        }
     }
-    const handleSignup = () => {
-        console.log("Sign Up Clicked!");
+    async function handleSignup() {
+        if (password) {
+            setPasswordError("");
+        }
+        else {
+            setPasswordError("Password cannot be blank.");
+        }
+        if (username) {
+            setUsernameError("");
+        }
+        else {
+            setUsernameError("Username cannot be blank.");
+        }
+
+        if (username && password) {
+            console.log("Sign Up Clicked!");
+            try {
+                await register(username, password);
+            }
+            catch (error) {
+                if (error instanceof Error) {
+                    setPasswordError(error.message);
+                } else {
+                    setPasswordError("An unexpected error occurred.");
+                }
+            }
+        }
     }
 
     return(
