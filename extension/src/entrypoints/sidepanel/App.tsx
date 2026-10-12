@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { API_URL, getHealth } from '@/lib/api';
+import Button from '@/components/Button';
 
 type Status =
   | { kind: 'checking' }
@@ -58,15 +59,7 @@ export default function App() {
             {status.message}. Is the backend running at {API_URL}?
           </p>
         )}
-
-        <button
-          type="button"
-          onClick={() => void check()}
-          disabled={status.kind === 'checking'}
-          className="mt-3 border-2 border-b-dirt border-l-grass border-r-dirt border-t-grass bg-grass px-3 py-1 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50"
-        >
-          Check again
-        </button>
+        <Button variant='primary' size='sm' onClick={()=> void check()} disabled={status.kind==='checking'}>Check again</Button>
       </section>
     </main>
   );
