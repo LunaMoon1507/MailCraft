@@ -23,6 +23,10 @@ MailCraft toolbar icon to open the side panel. It should show "Connected".
 To load the build in your everyday Chrome instead: `chrome://extensions` →
 Developer mode → Load unpacked → pick `extension/.output/chrome-mv3-dev`.
 
+The extension ID is always `abnalcomdnkcdgmnplffokedaeabecgh` (pinned by `manifest.key` in
+`wxt.config.ts`; Gmail sign-in depends on it). Don't generate your own key.
+See the main README §9, "Extension ID & key".
+
 Other scripts: `npm run build` (production build to `.output/chrome-mv3`),
 `npm run zip` (zip for sharing), `npm run typecheck`.
 

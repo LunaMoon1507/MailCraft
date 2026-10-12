@@ -6,3 +6,4 @@ dist/
 .wxt/
 .output/
 generated/
+*.pem

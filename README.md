@@ -17,9 +17,9 @@ backend + database tracks each user's progress independently of Gmail itself.
 | Objective | How it's satisfied |
 |---|---|
 | User authentication | Self-built username/password auth (JWT + bcrypt) in the backend, separate from Google OAuth |
-| Dynamic database of user/item data | PostgreSQL: User, UserStats, Achievement, UserAchievement, ActionLog, SenderCatalog, Friendship, DailySnapshot, Reward tables |
+| Dynamic database of user/item data | PostgreSQL: `users`, `userStats`, `achievement`, UserAchievement, ActionLog, SenderCatalog, Friendship, DailySnapshot, Reward tables |
 | Frontend–backend–database operation(s) | "Log cleanup action" flow: extension → Express API → Postgres → updated stats returned |
-| Dataset with 100+ items | `SenderCatalog` seeded with 100+ known bulk-mail/newsletter domains (used to tag and prioritize the cleanup queue); `Achievement` seeded with 20–30 badges (can pad to 100 with tiered variants) |
+| Dataset with 100+ items | `SenderCatalog` seeded with 100+ known bulk-mail/newsletter domains (used to tag and prioritize the cleanup queue); `achievement` seeded with 20–30 badges (can pad to 100 with tiered variants) |
 | New user registration | `/api/auth/register` endpoint + Register screen in the side panel |
 | Expected UI elements | Login, Register, Logout, Profile (level, stats, achievements grid) |
 | Design aesthetics | Consistent Tailwind theme, custom color palette, Framer Motion micro-animations, iconography for achievements |
@@ -125,7 +125,7 @@ while still using the real Gmail API.
 | Gmail access | Gmail REST API + `chrome.identity` | Client-side OAuth, no server involvement |
 | Backend | Node.js + Express + TypeScript | REST API for auth & game data. ES modules; `tsx` for dev, `tsc` for builds |
 | Validation / abuse | zod + express-rate-limit | Request validation, per-user rate limits |
-| ORM | Prisma | Type-safe DB access, migrations, seed scripts |
+| ORM | Prisma 7 (with `@prisma/adapter-pg`) | Type-safe DB access, migrations, seed scripts. See §4.3 |
 | Database | PostgreSQL (Neon or Supabase free tier) | Persistent, real relational DB |
 | Auth | JWT (access token) + bcrypt (password hashing) | Self-implemented, not a third-party auth provider |
 | Hosting (beta) | Render or Fly.io free tier | Zero cost for a small friend group |
@@ -140,7 +140,12 @@ MailCraft/
 │   │   ├── server.ts       # entry point: starts listening
 │   │   ├── config/env.ts   # loads and checks .env
 │   │   ├── app.ts          # builds the Express app (importable by tests)
+│   │   ├── prisma.ts       # shared Prisma client (pooled DATABASE_URL)
+│   │   ├── generated/      # Prisma client code (git-ignored; `npx prisma generate`)
 │   │   └── routes/         # API layer (services/, repositories/ to come)
+│   ├── prisma/
+│   │   └── schema.prisma   # database schema (source for `prisma generate`)
+│   ├── prisma.config.ts    # Prisma CLI config (uses DIRECT_URL)
 │   ├── .env.example        # copy to .env
 │   ├── tsconfig.json
 │   └── package.json
@@ -159,39 +164,42 @@ MailCraft/
 Node equivalent of a Python virtual environment; packages already install
 per-project into `node_modules/`).
 
-**One-time setup (macOS):**
+**One-time setup (macOS), from the MailCraft root folder:**
 
 ```bash
 # 1. Install nvm, then open a new terminal window
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
 
 # 2. Install and select the project's Node version (reads .nvmrc)
-cd path/to/MailCraft
 nvm install
 
-# 3. Install backend packages and create your env file, and run prisma pull/generate to get the database files.
+# 3. Install backend packages, create your env file, and generate the
+#    Prisma client (the server imports it, and it isn't in git)
 cd express-backend
-npm install
+npm install            # installs Prisma 7 from the lockfile
 cp .env.example .env   # then fill in the values (see §4.2)
-npx prisma db pull
-npx prisma db generate
+npx prisma generate
 ```
 
-**Every time:**
+Don't run `npx prisma db pull` during setup; see §4.3 for when it's needed.
+
+**Every time (from MailCraft project root):**
 
 ```bash
-cd path/to/MailCraft
 nvm use
 cd express-backend
-npm run dev        # restarts on save → http://localhost:3000/api/health
-
-# http://localhost:3000/api/users -> go to this to test if the database connection worked
+npx prisma generate   # only if schema.prisma changed since your last pull
+npm run dev           # restarts on save
 ```
+
+Check it's working: http://localhost:3000/api/health should show
+`{"status":"ok"}`, and http://localhost:3000/api/users should return a list
+from the database (an empty list `[]` still means the connection works).
 
 **Extension** (one-time: `cd extension && npm install && cp .env.example .env`):
 
 ```bash
-cd path/to/MailCraft/extension
+cd extension       # from the MailCraft root, in a second terminal tab
 npm run dev        # dev server on :3100 (backend keeps :3000), opens Chrome with the extension
 ```
 
@@ -236,19 +244,67 @@ Each app has a committed `.env.example` (the template) and a git-ignored
 - Keep the repo in a normal folder (e.g. `~/code/MailCraft`), not a shared
   cloud-drive folder, where `.env` files would sync to everyone with access.
 
+### 4.3 Database workflow (Prisma)
+
+The backend uses **Prisma 7** (`^7.10.0` in `express-backend/package.json`).
+Always run Prisma commands **from `express-backend/`** after `npm install`, so
+`npx prisma` uses the project's copy. Run from anywhere else (the repo root,
+`extension/`), `npx` downloads the newest Prisma from npm, which is currently
+a Prisma 8 pre-release with different commands (e.g. no `db pull`). Never run
+`npm install prisma` without a version.
+
+Two commands, two different jobs:
+
+| Command | What it does | Who runs it, when |
+|---|---|---|
+| `npx prisma generate` | Builds the Prisma client in `src/generated/prisma` from `schema.prisma`. That folder is git-ignored, so the server crashes on startup without it. | **Everyone**: on first setup, and after any `git pull` that changes `prisma/schema.prisma` |
+| `npx prisma db pull` | Reads the live database and **rewrites** `prisma/schema.prisma` to match it | **Only the person who changed the database** (e.g. edited tables in Supabase), right after the change |
+
+**Changing the database:**
+
+1. Make the change in Supabase.
+2. From `express-backend/`: `npx prisma db pull`, then `npx prisma generate`.
+3. Check the `schema.prisma` diff, restart the server, and commit
+   `prisma/schema.prisma` with a message saying what changed.
+4. Tell the team. They `git pull` and run `npx prisma generate`.
+
+Only one person should run `db pull` for a given change; if several people
+do, they create competing edits to `schema.prisma`. The team should also pick
+one way to change the schema: editing in Supabase + `db pull` (current), or
+editing `schema.prisma` + `prisma migrate`. Mixing the two makes the database
+and the schema drift apart.
+
+**Connection strings:** the running app (`src/prisma.ts`) uses the pooled
+`DATABASE_URL`, which shares a few connections across many requests. The
+Prisma CLI (`prisma.config.ts`) uses `DIRECT_URL`, because schema reads and
+migrations need a direct connection. Keep that split.
+
+**Common errors:**
+
+- `No command registered for 'pull'`: you ran Prisma 8 by accident. `cd
+  express-backend`, run `npm install`, and confirm `npx prisma --version`
+  shows 7.x.
+- `Cannot find module './generated/prisma/client.js'`: run `npx prisma generate`.
+- `Missing environment variable …`: fill in `express-backend/.env` (§4.2).
+
 ---
 
 ## 5. Data Model (Postgres via Prisma)
 
-**Users**
+Names in `code font` are the real table/model names in the database and
+`prisma/schema.prisma`; use them exactly in code (e.g. `prisma.userStats`).
+Tables in **bold** without code font are planned and not created yet.
+
+**`users`**
 - id, username (unique), email (unique), password_hash, timezone (IANA, e.g. `America/New_York`), created_at
 
-**UserStats**
-- user_id (FK), xp, level, highest_level, current_streak, longest_streak,
-  last_active_date, best_day_count, best_day_date, equipped_reward_id (FK, nullable)
+**`userStats`**
+- user_id (PK, FK → `users.id`, cascade delete), xp, level, highest_level,
+  current_streak, longest_streak, last_active_date, best_day_count,
+  best_day_date, equipped_reward_id (FK, nullable; planned, not yet in the schema)
 - `highest_level` never decreases, so rewards stay unlocked even if XP drops
 
-**Achievement** (seed data, 20–30 base badges padded to 100 with tiers)
+**`achievement`** (seed data, 20–30 base badges padded to 100 with tiers)
 - id, name, description, icon, criteria_type, criteria_value
 - *(e.g., "Archive 50 emails", "3-day streak", "Clear 100 emails from bulk senders")*
 
@@ -332,7 +388,7 @@ reports what happened.
   which conflicted with the daily-session rule.)
 - **Achievements:** unlock achievements for lifetime emails cleaned, daily streaks,
   number cleaned per amount of time, bulk-sender emails cleared, etc. Evaluated
-  after every action from the `Achievement` table's `criteria_type` /
+  after every action from the `achievement` table's `criteria_type` /
   `criteria_value`.
 - **Levels:** `level = floor(sqrt(xp / 10)) + 1`, which gives level 1 at 0 XP,
   level 2 at 10 XP, level 4 at 90 XP and level 11 at 1,000 XP. (Replaces `10(log(xp)+9)`, which gave level 90 at
@@ -395,6 +451,38 @@ reports what happened.
   and `gmail.labels` are redundant with it. Avoid `mail.google.com` (full access); it isn't
   needed since "delete" means Trash.
 
+### Extension ID & key
+
+The extension ID is pinned to **`abnalcomdnkcdgmnplffokedaeabecgh`** by the public key in
+`extension/wxt.config.ts` (`manifest.key`). The Google Cloud "Chrome
+Extension" OAuth client is registered to this ID, so Gmail sign-in only works
+for builds that keep it.
+
+- **Teammates don't generate anything.** Pull the repo, load the extension
+  unpacked, and it gets the same ID automatically. Check it on the MailCraft
+  card in `chrome://extensions`.
+- **Never replace or remove `manifest.key`.** A new key means a new ID, and
+  Gmail sign-in breaks for everyone until the OAuth client is updated.
+- **If your ID doesn't match:** remove MailCraft in `chrome://extensions`
+  and Load unpacked again. A plain reload doesn't pick up a new ID.
+- **The private key** (`mailcraft-key.pem`) was generated once, is
+  git-ignored (`*.pem`), and is kept in the team password manager. Unpacked
+  builds don't need it; nobody else needs a copy.
+- **Chrome Web Store:** the store assigns its own ID, so an Unlisted listing
+  needs a second "Chrome Extension" OAuth client for that ID.
+
+How the key was made (for reference only; don't rerun unless the team
+agrees to change the ID and update the OAuth client):
+
+```bash
+cd extension
+openssl genrsa 2048 | openssl pkcs8 -topk8 -nocrypt -out mailcraft-key.pem
+# public key for manifest.key
+openssl rsa -in mailcraft-key.pem -pubout -outform DER | openssl base64 -A; echo
+# extension ID
+openssl rsa -in mailcraft-key.pem -pubout -outform DER | shasum -a 256 | head -c32 | tr 0-9a-f a-p; echo
+```
+
 ---
 
 ## 10. Build Order / Milestones
@@ -405,7 +493,7 @@ reports what happened.
 3. **Gmail connection**: OAuth via `chrome.identity`, fetch + list a batch of emails
 4. **Core loop**: archive/trash/label action → `/api/actions` → XP update → UI
    reflects it (with optimistic update + action outbox)
-5. **Profile + achievements + rewards**: seed `Achievement`, `Reward` and
+5. **Profile + achievements + rewards**: seed `achievement`, `Reward` and
    `SenderCatalog` data, wire up unlock logic, reward equipping and
    bulk-sender tagging
 6. **Daily systems**: streaks in user time zone, high scores, end-of-day
@@ -428,7 +516,7 @@ reports what happened.
 | Replaced level formula | `10(log(xp)+9)` gave level 90 at 1 XP and was undefined at 0 XP |
 | Server-side XP + unique constraint + rate limit | Client-reported actions could be faked or replayed |
 | Added `Friendship` + `/api/friends` | Leaderboard promised "add friends" with no supporting table/endpoint |
-| Streaks use calendar days in user time zone; added `User.timezone` | "Missed day" and "24H no XP" rules conflicted |
+| Streaks use calendar days in user time zone; added `users.timezone` | "Missed day" and "24H no XP" rules conflicted |
 | Added label XP value (1xp) | Label was a listed action with no XP value |
 | Added `DELETE /api/account` | Settings screen had "delete account" with no endpoint |
 | "Delete" = move to Trash; scopes reduced to `gmail.modify` | Permanent delete needs full-access scope; `gmail.readonly` was redundant |
