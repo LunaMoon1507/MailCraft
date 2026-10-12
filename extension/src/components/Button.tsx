@@ -1,15 +1,14 @@
-import React, { forwardRef, type ButtonHTMLAttributes } from 'react';
-
+import { type ComponentProps } from "react";
 export type ButtonVariant = 'primary' | 'secondary';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
-export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends ComponentProps<"button"> {
   variant: ButtonVariant;
   size: ButtonSize;
 }
 
 // update these to fit our UI as needed
-const baseStyles = "m-3 border-2 border-transparent px-3 py-1 font-bold inline-flex items-center justify-center hover:brightness-110 disabled:opacity-50";
+const baseStyles = "m-3 border-2 border-transparent py-1 font-bold inline-flex items-center justify-center hover:brightness-110 disabled:opacity-50";
 const variants = {
     primary: "bg-grass text-white border-b-dirt border-r-dirt",
     secondary: "bg-ocean text-white border-b-ice border-r-ice"

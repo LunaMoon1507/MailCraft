@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { API_URL, getHealth } from '@/lib/api';
 import Button from '@/components/Button';
+import Card from '@/components/Card';
 
 type Status =
   | { kind: 'checking' }
@@ -33,7 +34,7 @@ export default function App() {
       <h1 className="text-xl font-bold tracking-wide">MailCraft</h1>
       <p className="mt-1 text-sm text-stone">Inbox cleanup, block by block.</p>
 
-      <section className="mt-6 border-2 border-stone bg-black/30 p-3">
+      <Card variant="primary">
         <h2 className="text-xs uppercase tracking-widest text-stone">Backend connection</h2>
 
         <div className="mt-2 flex items-center gap-2" role="status" aria-live="polite">
@@ -60,7 +61,7 @@ export default function App() {
           </p>
         )}
         <Button variant='primary' size='sm' onClick={()=> void check()} disabled={status.kind==='checking'}>Check again</Button>
-      </section>
+      </Card>
     </main>
   );
 }
