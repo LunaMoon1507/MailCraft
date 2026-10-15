@@ -4,10 +4,40 @@ import jwt from "jsonwebtoken";
 import { prisma } from "../prisma.js";
 import { type usersModel } from "../generated/prisma/models.js";
 import { env } from "../config/env.js";
+import { decode } from "punycode";
+import { verify } from "crypto";
 
 export const authRouter = Router();
 
 const saltRounds = 10;
+
+interface JWTToken {
+  "sub": string,
+  "username": string,
+  "roles": string[],
+  "iat": number,
+  "exp": number
+}
+
+function verifyToken(token: string) {
+    return jwt.verify(token, env.jwtSecret);
+}
+function decodeToken(token: string) {
+    return jwt.decode(token) as JWTToken;
+}
+
+export function getLoggedInUser(req: Request) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return null;
+    }
+    const token = authHeader.substring(7);
+    if (!verifyToken(token)) {
+        return null;
+    }
+    const payload = decodeToken(token);
+    return payload;
+}
 
 authRouter.post("/login", async (_req: Request, res: Response) => {
     if (!_req.body) {

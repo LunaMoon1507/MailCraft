@@ -11,6 +11,12 @@ export default function Login () {
     const [usernameError, setUsernameError] = useState("");
     const [passwordError, setPasswordError] = useState("");
 
+    const handleLoginSignupClick = () => {
+        setDisplayLogin(!displayLogin);
+        setUsernameError("");
+        setPasswordError("");
+    }
+
     async function handleLogin() {
         try {
             await login(username, password);
@@ -61,7 +67,7 @@ export default function Login () {
                 :
                 <Button variant="secondary" size="sm" onClick={handleSignup}>Sign Up</Button>
                 }
-            <div className="text-sm underline" onClick={()=>setDisplayLogin(!displayLogin)}>
+            <div className="text-sm underline" onClick={handleLoginSignupClick}>
                 {displayLogin ? "No account? Sign up!" : "Already have an account? Log in!"}
             </div>
         </Card>

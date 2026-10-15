@@ -1,6 +1,6 @@
 import { storage } from '#imports';
 
-const tokenKey = 'local:token';
+export const tokenKey = 'local:token';
 
 export const API_URL: string = import.meta.env.WXT_API_URL ?? 'http://localhost:3000';
 
