@@ -11,7 +11,7 @@ export default function Login () {
     const [usernameError, setUsernameError] = useState("");
     const [passwordError, setPasswordError] = useState("");
 
-    const handleLoginSignupClick = () => {
+    const handleSwitchClick = () => {
         setDisplayLogin(!displayLogin);
         setUsernameError("");
         setPasswordError("");
@@ -28,6 +28,8 @@ export default function Login () {
                 setPasswordError("An unexpected error occurred.");
             }
         }
+        setUsername("");
+        setPassword("");
     }
     async function handleSignup() {
         if (password) {
@@ -56,18 +58,20 @@ export default function Login () {
                 }
             }
         }
+        setUsername("");
+        setPassword("");
     }
 
     return(
         <Card variant="secondary">
-            <TextInput updateValue={setUsername} error={usernameError} label="Username"/>
-            <TextInput type="password" updateValue={setPassword} error={passwordError} label="Password"/>
+            <TextInput updateValue={setUsername} value={username} error={usernameError} label="Username"/>
+            <TextInput type="password" updateValue={setPassword} value={password} error={passwordError} label="Password"/>
             {displayLogin ?
                 <Button variant="secondary" size="sm" onClick={handleLogin}>Login</Button>
                 :
                 <Button variant="secondary" size="sm" onClick={handleSignup}>Sign Up</Button>
                 }
-            <div className="text-sm underline" onClick={handleLoginSignupClick}>
+            <div className="text-sm underline" onClick={handleSwitchClick}>
                 {displayLogin ? "No account? Sign up!" : "Already have an account? Log in!"}
             </div>
         </Card>
