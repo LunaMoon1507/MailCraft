@@ -23,14 +23,23 @@ authRouter.post("/login", async (_req: Request, res: Response) => {
     else {
         const username = _req.body.username
         const password = _req.body.password
-        const hashedPassword = await bcrypt.hash(password, saltRounds);
-        console.log(username, hashedPassword);
 
         try {
             const user: usersModel = await prisma.users.findUniqueOrThrow({
-                where: { username: username , password_hash: hashedPassword},
+                where: { username: username },
             });
-            const token = jwt.sign(password, env.jwtSecret)
+            
+            const isMatch = await bcrypt.compare(password, user.password_hash)
+            if (!isMatch) {
+                throw new Error(); // go to the catch block
+            }
+            const payload = {
+                sub: user.id.toString(),
+                username: user.username,
+                roles: ['user'], // fix this if we add different user roles
+            }
+            const token = jwt.sign(payload, env.jwtSecret, {expiresIn: '1h'});
+            console.log("Login success");
             res.status(200).json({'token': token});
         }
         catch {
@@ -76,7 +85,12 @@ authRouter.post("/register", async (_req, res) => {
                     password_hash: hashedPassword,
                     timezone: ianaTimeZone,
                 }})
-                const token = jwt.sign(password, env.jwtSecret)
+                const payload = {
+                    sub: user.id.toString(),
+                    username: user.username,
+                    roles: ['user'], // fix this if we add different user roles
+                }
+                const token = jwt.sign(payload, env.jwtSecret, {expiresIn: '1h'});
                 res.status(200).json({'token': token});
             }
         }
