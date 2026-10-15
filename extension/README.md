@@ -33,10 +33,13 @@ Other scripts: `npm run build` (production build to `.output/chrome-mv3`),
 ## Layout
 
 ```
-entrypoints/
+src/entrypoints/
   background.ts         service worker: opens the side panel on icon click
   sidepanel/            side panel page (index.html → main.tsx → App.tsx)
-lib/api.ts              backend client (base URL from WXT_API_URL)
-assets/tailwind.css     Tailwind import + theme tokens
+src/lib/api.ts              backend client (base URL from WXT_API_URL)
+src/lib/auth.ts             auth related api requests
+src/assets/tailwind.css     Tailwind import + theme tokens
+src/components/              UI components
+src/pages/                   UI pages
 wxt.config.ts           manifest: permissions, host permissions
 ```
