@@ -85,6 +85,15 @@ authRouter.post("/register", async (_req, res) => {
                     password_hash: hashedPassword,
                     timezone: ianaTimeZone,
                 }})
+                const userStats = await prisma.userStats.create({data: {
+                    user_id: user.id,
+                    xp: 0,
+                    highest_level: 1,
+                    level: 1,
+                    current_streak: 0,
+                    longest_streak: 0,
+                    best_day_count: 0,
+                }})
                 const payload = {
                     sub: user.id.toString(),
                     username: user.username,
