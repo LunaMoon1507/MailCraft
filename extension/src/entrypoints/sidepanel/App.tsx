@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { API_URL, getHealth } from '@/lib/api';
+import Button from '@/components/Button';
+import Card from '@/components/Card';
+import Login from '@/pages/Login';
+import Profile from '@/pages/Profile';
 
 type Status =
   | { kind: 'checking' }
@@ -32,7 +36,7 @@ export default function App() {
       <h1 className="text-xl font-bold tracking-wide">MailCraft</h1>
       <p className="mt-1 text-sm text-stone">Inbox cleanup, block by block.</p>
 
-      <section className="mt-6 border-2 border-stone bg-black/30 p-3">
+      <Card variant="primary">
         <h2 className="text-xs uppercase tracking-widest text-stone">Backend connection</h2>
 
         <div className="mt-2 flex items-center gap-2" role="status" aria-live="polite">
@@ -58,16 +62,10 @@ export default function App() {
             {status.message}. Is the backend running at {API_URL}?
           </p>
         )}
-
-        <button
-          type="button"
-          onClick={() => void check()}
-          disabled={status.kind === 'checking'}
-          className="mt-3 border-2 border-b-dirt border-l-grass border-r-dirt border-t-grass bg-grass px-3 py-1 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50"
-        >
-          Check again
-        </button>
-      </section>
+        <Button variant='primary' size='sm' onClick={()=> void check()} disabled={status.kind==='checking'}>Check again</Button>
+      </Card>
+      <Login/>
+      <Profile/>
     </main>
   );
 }
