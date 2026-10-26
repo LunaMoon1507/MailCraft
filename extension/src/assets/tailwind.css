@@ -1,12 +1,7 @@
 @import 'tailwindcss';
 
-/* MailCraft theme tokens. Extend these as the visual design firms up. */
-@theme {
-  --color-grass: #5d9b3a;
-  --color-ocean: #4d6ab3;
-  --color-ice: #a9c2e8;
-  --color-dirt: #8b5a2b;
-  --color-stone: #7a7a7a;
-  --color-night: #1d1f24;
-  --font-pixel: ui-monospace, 'SF Mono', Menlo, monospace;
-}
+/* MailCraft "Minecraft" theme. Order matters: tokens -> base -> components.
+   See extension/THEME.md before adding colors or components. */
+@import './theme/tokens.css';
+@import './theme/base.css';
+@import './theme/components.css';
