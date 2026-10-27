@@ -1,4 +1,5 @@
 import Card from "@/components/Card";
+import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect } from "react";
 import { type ProfileResponse, getProfile } from "@/lib/api";
 import { logout } from "@/lib/auth";
@@ -7,6 +8,7 @@ import Button from "@/components/Button";
 export default function Profile() {
     const [info, setInfo] = useState<ProfileResponse>();
     const [message, setMessage] = useState("");
+    const {token, isAuthenticated, loading} = useAuth();
 
     async function loadProfile() {
         try {
@@ -25,12 +27,28 @@ export default function Profile() {
 
     useEffect(()=> {
         loadProfile();
-    }, [])
+    }, [token, isAuthenticated])
 
     const handleLogout = () => {
         logout();
         setInfo(undefined);
         setMessage("");
+    }
+
+    if (loading) {
+        return (
+            <Card variant='primary'>
+                <div>Loading...</div>
+            </Card>
+        )
+    }
+    
+    if (!isAuthenticated) {
+        return (
+            <Card variant='primary'>
+                <div>Please log in to view your profile.</div>
+            </Card>
+        )
     }
 
     return (
@@ -43,7 +61,6 @@ export default function Profile() {
                     Level: {info.userStats.level}
                 </div>
             }
-            <Button variant='secondary' size='sm' onClick={loadProfile}>Refresh Profile</Button>
             <Button variant='secondary' size='sm' onClick={handleLogout}>Log Out</Button>
         </Card>
     )

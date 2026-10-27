@@ -1,6 +1,9 @@
 import { storage } from '#imports';
 
-export const tokenKey = 'local:token';
+export const authToken = storage.defineItem<string | null>(
+  "local:token",
+  {fallback: null}
+);
 
 export const API_URL: string = import.meta.env.WXT_API_URL ?? 'http://localhost:3000';
 
@@ -22,7 +25,7 @@ export async function login(username: string, password:string) {
     throw new Error(errorMessage.message);
   }
   const { token } = await res.json();
-  await storage.setItem(tokenKey, token);
+  await authToken.setValue(token)
   return;
 }
 
@@ -44,10 +47,10 @@ export async function register(username: string, password:string) {
     throw new Error(errorMessage.message);
   }
   const { token } = await res.json();
-  await storage.setItem(tokenKey, token);
+  await authToken.setValue(token);
   return;
 }
 
 export async function logout() {
-  await storage.removeItem(tokenKey);
+  await authToken.removeValue();
 }
