@@ -372,6 +372,9 @@ All routes except register/login require a valid JWT and are rate-limited per us
 6. **Leaderboard** — friend rankings, add friend by username, pending requests
 7. **Settings** — logout, disconnect Gmail, delete account
 
+All screens share one Minecraft-style pixel theme (palette, font, beveled
+block components). See [`extension/THEME.md`](extension/THEME.md).
+
 ---
 
 ## 8. Gamification Mechanics
@@ -524,3 +527,4 @@ openssl rsa -in mailcraft-key.pem -pubout -outform DER | shasum -a 256 | head -c
 | Dropped `gmail.labels` scope | `gmail.modify` already covers creating and applying labels |
 | Level rewards: one reward per level, unlocked automatically, no spending | Spending XP would lower the level it's based on; `highest_level` keeps unlocks permanent |
 | Added `ActionOutbox` | Game keeps working while the backend is asleep or offline |
+| Added a shared Minecraft pixel theme (`extension/src/assets/theme/`, `extension/THEME.md`) | One set of tokens and `.mc-*` components keeps every screen consistent as screens are added |

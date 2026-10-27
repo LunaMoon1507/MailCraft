@@ -4,6 +4,7 @@ import Button from '@/components/Button';
 import Card from '@/components/Card';
 import Login from '@/pages/Login';
 import Profile from '@/pages/Profile';
+import grassBlock from '@graphics/5-grass.png';
 
 type Status =
   | { kind: 'checking' }
@@ -32,40 +33,50 @@ export default function App() {
   }, [check]);
 
   return (
-    <main className="min-h-screen bg-night p-4 font-pixel text-white">
-      <h1 className="text-xl font-bold tracking-wide">MailCraft</h1>
-      <p className="mt-1 text-sm text-stone">Inbox cleanup, block by block.</p>
+    <main className="mc-app">
+      <header className="flex items-center gap-px3">
+        <span className="mc-slot">
+          <img src={grassBlock} alt="" />
+        </span>
+        <div className="flex flex-col gap-px2">
+          <h1 className="mc-title">MailCraft</h1>
+          <p className="mc-subtitle">Inbox cleanup, block by block.</p>
+        </div>
+      </header>
 
-      <Card variant="primary">
-        <h2 className="text-xs uppercase tracking-widest text-stone">Backend connection</h2>
-
-        <div className="mt-2 flex items-center gap-2" role="status" aria-live="polite">
+      <Card variant="primary" heading="Backend connection">
+        <div className="flex items-center gap-px2" role="status" aria-live="polite">
           <span
+            aria-hidden="true"
             className={
-              'inline-block size-3 ' +
+              'mc-status ' +
               (status.kind === 'connected'
-                ? 'bg-grass'
+                ? 'mc-status--ok'
                 : status.kind === 'error'
-                  ? 'bg-red-500'
-                  : 'animate-pulse bg-amber-400')
+                  ? 'mc-status--error'
+                  : 'mc-status--pending')
             }
           />
-          <span className="text-sm">
-            {status.kind === 'checking' && 'Checking…'}
+          <span>
+            {status.kind === 'checking' && 'Checking...'}
             {status.kind === 'connected' && `Connected (${status.latencyMs} ms)`}
             {status.kind === 'error' && 'Not connected'}
           </span>
         </div>
 
         {status.kind === 'error' && (
-          <p className="mt-2 text-xs break-words text-red-300">
+          <p className="mc-error">
             {status.message}. Is the backend running at {API_URL}?
           </p>
         )}
-        <Button variant='primary' size='sm' onClick={()=> void check()} disabled={status.kind==='checking'}>Check again</Button>
+        <div>
+          <Button variant="primary" size="sm" onClick={() => void check()} disabled={status.kind === 'checking'}>
+            Check again
+          </Button>
+        </div>
       </Card>
-      <Login/>
-      <Profile/>
+      <Login />
+      <Profile />
     </main>
   );
 }

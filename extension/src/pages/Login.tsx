@@ -63,16 +63,18 @@ export default function Login () {
     }
 
     return(
-        <Card variant="secondary">
-            <TextInput updateValue={setUsername} value={username} error={usernameError} label="Username"/>
-            <TextInput type="password" updateValue={setPassword} value={password} error={passwordError} label="Password"/>
-            {displayLogin ?
-                <Button variant="secondary" size="sm" onClick={handleLogin}>Login</Button>
-                :
-                <Button variant="secondary" size="sm" onClick={handleSignup}>Sign Up</Button>
+        <Card variant="secondary" heading={displayLogin ? "Log in" : "Create account"}>
+            <TextInput updateValue={setUsername} value={username} error={usernameError} label="Username" autoComplete="username"/>
+            <TextInput type="password" updateValue={setPassword} value={password} error={passwordError} label="Password" autoComplete={displayLogin ? "current-password" : "new-password"}/>
+            <div className="flex flex-col items-start gap-px3">
+                {displayLogin ?
+                    <Button variant="primary" size="md" block onClick={handleLogin}>Login</Button>
+                    :
+                    <Button variant="primary" size="md" block onClick={handleSignup}>Sign Up</Button>
                 }
-            <div className="text-sm underline" onClick={handleSwitchClick}>
-                {displayLogin ? "No account? Sign up!" : "Already have an account? Log in!"}
+                <button type="button" className="mc-link" onClick={handleSwitchClick}>
+                    {displayLogin ? "No account? Sign up!" : "Already have an account? Log in!"}
+                </button>
             </div>
         </Card>
     )

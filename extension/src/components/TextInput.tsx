@@ -1,22 +1,37 @@
-import React, { type ComponentProps, useState } from "react";
+import { type ComponentProps, useId } from 'react';
 
-// Extend native HTML input attributes to accept all standard input props automatically
-export interface InputProps extends ComponentProps<"input"> {
+// Styling lives in src/assets/theme/components.css (.mc-field, .mc-input). See THEME.md.
+export interface InputProps extends ComponentProps<'input'> {
   label: string;
-  updateValue: Function;
+  updateValue: (value: string) => void;
   error?: string;
 }
 
-export default function TextInput({label, error, updateValue, children, ...props} : InputProps) {
-    const [text, setText] = useState("");
+export default function TextInput({ label, error, updateValue, id, className = '', ...props }: InputProps) {
+  const autoId = useId();
+  const inputId = id ?? autoId;
+  const errorId = `${inputId}-error`;
 
-    return(
-        <div>
-            <div className="text-sm">{label}</div>
-            <input type="text" name={label} className="bg-night" onChange={(e)=> {setText(e.target.value); updateValue(e.target.value)}}{...props}></input>
-            {error && (
-                <p>{error}</p>
-            )}
-        </div>
-    )
+  return (
+    <div className="mc-field">
+      <label htmlFor={inputId} className="mc-label">
+        {label}
+      </label>
+      <input
+        type="text"
+        id={inputId}
+        name={label}
+        className={`mc-input ${className}`}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? errorId : undefined}
+        onChange={(e) => updateValue(e.target.value)}
+        {...props}
+      />
+      {error && (
+        <p id={errorId} className="mc-error">
+          {error}
+        </p>
+      )}
+    </div>
+  );
 }

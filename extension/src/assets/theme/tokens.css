@@ -1,0 +1,101 @@
+/* ==========================================================================
+   MailCraft "Minecraft" theme: design tokens
+   --------------------------------------------------------------------------
+   Every color, font and pixel size the UI uses is defined here, once.
+   Tailwind v4 turns each token into utilities automatically:
+     --color-matcha        ->  bg-matcha, text-matcha, border-matcha ...
+     --font-pixel          ->  font-pixel
+   Components in components.css read the same tokens with var(--...).
+
+   `static` keeps every token in the output even if no utility uses it yet,
+   so the .mc-* component classes can always rely on them.
+
+   Docs: extension/THEME.md
+   ========================================================================== */
+
+/* The Minecraft font (Pwnage_Block, via fontmeme.com). It lives in the repo's
+   top-level graphics/ folder; `@graphics` is an alias set in wxt.config.ts. */
+@font-face {
+  font-family: 'Minecraft';
+  src: url('@graphics/minecraft_font.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
+
+@theme static {
+  /* ---- 1. Palette: the six source colors (schemecolor.com "Minecraft Game")
+     Don't change these to re-skin a screen; change the semantic roles below. */
+  --color-grassfield: #477a1e;   /* dark grass: shadows on green, drips      */
+  --color-matcha: #70b237;       /* grass: primary action face               */
+  --color-young-green: #8fca5c;  /* light grass: highlights, success, focus  */
+  --color-solid-brown: #61371f;  /* dark dirt/wood: shadows on brown         */
+  --color-burma-teak: #854f2b;   /* dirt/planks: secondary action face       */
+  --color-milk-tea: #c28340;     /* light wood: highlights, muted text, gold */
+
+  /* ---- 2. Derived colors: not in the source palette, needed for contrast.
+     Each is a darker/lighter step of a palette color, or a game-world extra. */
+  --color-bedrock: #170d06;      /* near-black brown: outlines, input wells  */
+  --color-soil: #2b180c;         /* very dark dirt: panel background         */
+  --color-soil-raised: #3a2212;  /* panel highlight edge, hover rows         */
+  --color-parchment: #f4e7cf;    /* body text on dark and on brown           */
+  --color-moss: #2e5013;         /* darker grassfield: shadow on grass buttons */
+  --color-redstone: #b02e22;     /* errors, destructive actions              */
+  --color-redstone-light: #ff8f80; /* error text on dark backgrounds         */
+
+  /* ---- 3. Semantic roles: what components actually use.
+     Re-skin the app (e.g. a "Nether" theme) by pointing these elsewhere. */
+  --color-surface: var(--color-soil);
+  --color-surface-raised: var(--color-soil-raised);
+  --color-outline: var(--color-bedrock);
+  --color-text: var(--color-parchment);
+  --color-text-muted: var(--color-milk-tea);
+  --color-accent: var(--color-young-green);
+  --color-success: var(--color-matcha);
+  --color-warning: var(--color-milk-tea);
+  --color-danger: var(--color-redstone);
+
+  /* ---- 4. Type. The Minecraft font is drawn on an 8px grid, so it is
+     crispest at multiples of 8 (8, 16, 24, 32). */
+  --font-pixel: 'Minecraft', ui-monospace, 'SF Mono', Menlo, monospace;
+  --text-pixel-xs: 8px;
+  --text-pixel-sm: 12px;
+  --text-pixel-md: 16px;
+  --text-pixel-lg: 24px;
+  --text-pixel-xl: 32px;
+
+  /* ---- 5. Pixel geometry. One "game pixel" = 4 screen px. Borders, bevels,
+     drop shadows and press offsets are all whole multiples of it. */
+  --spacing-px1: 4px;
+  --spacing-px2: 8px;
+  --spacing-px3: 12px;
+  --spacing-px4: 16px;
+
+  /* ---- 6. Motion. Games animate in steps, not smooth curves. */
+  --animate-blink: mc-blink 1s steps(2, jump-none) infinite;
+  --animate-pop: mc-pop 240ms steps(3) both;
+
+  @keyframes mc-blink {
+    0% { opacity: 1; }
+    100% { opacity: 0.25; }
+  }
+  @keyframes mc-pop {
+    0% { transform: scale(0.6); }
+    70% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+  }
+}
+
+/* Non-color helpers that Tailwind has no namespace for. */
+:root {
+  --px: 4px; /* one game pixel; use calc(var(--px) * n) */
+
+  /* Text shadow every Minecraft label has: a hard 1-game-pixel drop. */
+  --mc-text-shadow: calc(var(--px) / 2) calc(var(--px) / 2) 0 var(--color-outline);
+
+  /* Pixel textures (16x16 PNGs, scaled 4x with nearest-neighbor). */
+  --tex-dirt: url('./textures/dirt.png');
+  --tex-planks: url('./textures/planks.png');
+  --tex-grass-cap: url('./textures/grass-cap.png');
+  --tex-size: 64px; /* 16 texture px * 4 */
+}
