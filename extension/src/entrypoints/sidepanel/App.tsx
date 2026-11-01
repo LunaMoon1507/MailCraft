@@ -4,6 +4,7 @@ import Button from '@/components/Button';
 import Card from '@/components/Card';
 import Login from '@/pages/Login';
 import Profile from '@/pages/Profile';
+import OAuth from '@/pages/OAuth';
 
 type Status =
   | { kind: 'checking' }
@@ -66,6 +67,7 @@ export default function App() {
       </Card>
       <Login/>
       <Profile/>
+      <OAuth />
     </main>
   );
 }
