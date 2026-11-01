@@ -4,6 +4,7 @@ import Button from '@/components/Button';
 import Card from '@/components/Card';
 import Login from '@/pages/Login';
 import Profile from '@/pages/Profile';
+import OAuth from '@/pages/OAuth';
 import grassBlock from '@graphics/5-grass.png';
 
 type Status =
@@ -75,8 +76,9 @@ export default function App() {
           </Button>
         </div>
       </Card>
-      <Login />
-      <Profile />
+      <Login/>
+      <Profile/>
+      <OAuth/>
     </main>
   );
 }

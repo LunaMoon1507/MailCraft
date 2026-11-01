@@ -1,4 +1,5 @@
 import Card from "@/components/Card";
+import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect } from "react";
 import { type ProfileResponse, getProfile } from "@/lib/api";
 import { logout } from "@/lib/auth";
@@ -8,6 +9,10 @@ import ProgressBar from "@/components/ProgressBar";
 export default function Profile() {
     const [info, setInfo] = useState<ProfileResponse>();
     const [message, setMessage] = useState("");
+    const {token, isAuthenticated, loading} = useAuth();
+
+    const stats = info?.userStats;
+    const xp = stats ? levelProgress(stats.xp) : null;
 
     async function loadProfile() {
         try {
@@ -26,7 +31,7 @@ export default function Profile() {
 
     useEffect(()=> {
         loadProfile();
-    }, [])
+    }, [token, isAuthenticated])
 
     const handleLogout = () => {
         logout();
@@ -34,8 +39,21 @@ export default function Profile() {
         setMessage("");
     }
 
-    const stats = info?.userStats;
-    const xp = stats ? levelProgress(stats.xp) : null;
+    if (loading) {
+        return (
+            <Card variant='primary'>
+                <div>Loading...</div>
+            </Card>
+        )
+    }
+    
+    if (!isAuthenticated) {
+        return (
+            <Card variant='primary'>
+                <div>Please log in to view your profile.</div>
+            </Card>
+        )
+    }
 
     return (
         <Card variant='primary' heading="Profile">
@@ -55,7 +73,6 @@ export default function Profile() {
                 </div>
             }
             <div className="flex flex-wrap gap-px2">
-                <Button variant='secondary' size='sm' onClick={loadProfile}>Refresh Profile</Button>
                 <Button variant='danger' size='sm' onClick={handleLogout}>Log Out</Button>
             </div>
         </Card>

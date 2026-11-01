@@ -1,7 +1,7 @@
 // Thin wrapper around the MailCraft backend. All server calls go through
 // here so the base URL, headers and (later) the JWT live in one place.
 import { storage } from '#imports';
-import { tokenKey } from './auth';
+import { authToken } from './auth';
 
 export const API_URL: string = import.meta.env.WXT_API_URL ?? 'http://localhost:3000';
 
@@ -20,7 +20,7 @@ export async function getHealth(signal?: AbortSignal): Promise<HealthResponse> {
 // helper function for any api calls that need the user to be signed in
 // automatically adds the authorization header
 async function makeAuthRequest(url: string, options: RequestInit = {}) {
-  const token = await storage.getItem<string>(tokenKey);
+  const token = await authToken.getValue();
   if (!token) {
     throw new Error("Please log in");
   }
@@ -34,7 +34,7 @@ async function makeAuthRequest(url: string, options: RequestInit = {}) {
 
   if (res.status === 401) {
     // if token expired, remove it
-    await storage.removeItem(tokenKey);
+    await authToken.removeValue();
     throw new Error("Session expired, please log in");
   }
 
