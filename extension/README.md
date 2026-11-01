@@ -34,7 +34,7 @@ Other scripts: `npm run build` (production build to `.output/chrome-mv3`),
 
 ```
 src/entrypoints/
-  background.ts         service worker: opens the side panel on icon click
+  background.ts         service worker: opens the side panel on icon click, handles OAuth login/logout
   sidepanel/            side panel page (index.html → main.tsx → App.tsx)
 src/lib/api.ts              backend client (base URL from WXT_API_URL)
 src/lib/auth.ts             auth related api requests

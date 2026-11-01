@@ -41,7 +41,7 @@ export default defineConfig({
       default_title: 'Open MailCraft',
     },
     oauth2: {
-      client_id: import.meta.env.WXT_GOOGLE_CLIENT_ID ?? "COULD NOT LOAD",
+      client_id: "68004933678-ijjkaoe1obb235g4ikc2c2088aec1ccf.apps.googleusercontent.com",
       scopes: [
         "https://www.googleapis.com/auth/gmail.modify",
         "https://www.googleapis.com/auth/gmail.labels.readonly"
