@@ -5,6 +5,12 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   srcDir: 'src',
   modules: ['@wxt-dev/module-react'],
+  // Shared art (Minecraft font, block images) lives in the repo's top-level
+  // graphics/ folder, outside this package. Import it as `@graphics/...`
+  // in TS and CSS. Paths here are relative to this folder.
+  alias: {
+    '@graphics': '../graphics',
+  },
   // WXT's dev server defaults to port 3000, which is the backend's port.
   // Keep it on its own port so http://localhost:3000 always reaches the API.
   dev: {
@@ -15,6 +21,10 @@ export default defineConfig({
   },
   vite: () => ({
     plugins: [tailwindcss()],
+    // Let the dev server read ../graphics (it's outside this package).
+    server: {
+      fs: { allow: ['.', '../graphics'] },
+    },
   }),
   manifest: {
     name: 'MailCraft',

@@ -1,0 +1,92 @@
+/* ==========================================================================
+   MailCraft "Minecraft" theme: base element styles
+   Applies to raw HTML elements on every screen. Keep this small: anything
+   with a name (button, panel, input) belongs in components.css instead.
+   ========================================================================== */
+
+/* Chrome injects its own stylesheet into every extension page (side panel,
+   popup, options) with roughly:
+       body { font-family: <system font>; font-size: 75%; }
+   That rule is unlayered, and unlayered CSS beats anything inside @layer, so
+   it would override the theme font no matter how it's set in @layer base.
+   These two declarations are deliberately OUTSIDE any layer so they win.
+   You won't see the problem when testing the page over http (e.g. a plain
+   Vite preview); it only shows up when the page runs as a chrome-extension://
+   page. */
+body {
+  font-family: var(--font-pixel);
+  font-size: var(--text-pixel-md);
+}
+
+@layer base {
+  html {
+    font-family: var(--font-pixel);
+    font-size: var(--text-pixel-md);
+    color: var(--color-text);
+    background-color: var(--color-outline);
+    /* The font's space glyph is narrow; open words up a little. */
+    word-spacing: 0.3em;
+    /* Pixel fonts look best without sub-pixel smoothing. */
+    -webkit-font-smoothing: none;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeSpeed;
+  }
+
+  body {
+    min-height: 100vh;
+    margin: 0;
+    line-height: 1.5;
+    /* Dark dirt wall behind every screen. */
+    background-color: var(--color-surface);
+    background-image:
+      linear-gradient(rgb(23 13 6 / 0.82), rgb(23 13 6 / 0.82)),
+      var(--tex-dirt);
+    background-size: auto, var(--tex-size) var(--tex-size);
+    image-rendering: pixelated;
+  }
+
+  /* Every bitmap stays blocky when scaled. */
+  img,
+  canvas {
+    image-rendering: pixelated;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-weight: normal; /* the font has one weight; faux-bold smears pixels */
+    text-shadow: var(--mc-text-shadow);
+  }
+
+  ::selection {
+    background: var(--color-matcha);
+    color: var(--color-outline);
+  }
+
+  /* Square, high-contrast focus ring for keyboard users on every control. */
+  :focus-visible {
+    outline: var(--px) solid var(--color-accent);
+    outline-offset: var(--px);
+  }
+
+  /* Chunky pixel scrollbar for the side panel. */
+  ::-webkit-scrollbar {
+    width: 12px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-outline);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-burma-teak);
+    border: 2px solid var(--color-outline);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+}

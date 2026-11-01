@@ -35,5 +35,12 @@
     "prisma": "^7.10.0",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"
+  },
+  "allowScripts": {
+    "@prisma/engines@7.10.1": true,
+    "bcrypt@6.0.0": true,
+    "esbuild@0.28.2": true,
+    "prisma@7.10.1": true,
+    "fsevents": true
   }
 }
