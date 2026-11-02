@@ -1,0 +1,7 @@
+@import 'tailwindcss';
+
+/* MailCraft "Minecraft" theme. Order matters: tokens -> base -> components.
+   See extension/THEME.md before adding colors or components. */
+@import './theme/tokens.css';
+@import './theme/base.css';
+@import './theme/components.css';

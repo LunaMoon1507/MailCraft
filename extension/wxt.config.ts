@@ -3,7 +3,14 @@ import tailwindcss from '@tailwindcss/vite';
 
 // See https://wxt.dev/api/config.html
 export default defineConfig({
+  srcDir: 'src',
   modules: ['@wxt-dev/module-react'],
+  // Shared art (Minecraft font, block images) lives in the repo's top-level
+  // graphics/ folder, outside this package. Import it as `@graphics/...`
+  // in TS and CSS. Paths here are relative to this folder.
+  alias: {
+    '@graphics': '../graphics',
+  },
   // WXT's dev server defaults to port 3000, which is the backend's port.
   // Keep it on its own port so http://localhost:3000 always reaches the API.
   dev: {
@@ -14,6 +21,10 @@ export default defineConfig({
   },
   vite: () => ({
     plugins: [tailwindcss()],
+    // Let the dev server read ../graphics (it's outside this package).
+    server: {
+      fs: { allow: ['.', '../graphics'] },
+    },
   }),
   manifest: {
     name: 'MailCraft',
@@ -22,12 +33,19 @@ export default defineConfig({
     // The Google OAuth client is tied to this ID. Not secret; do NOT regenerate
     // (see README §9 "Extension ID & key").
     key: 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1IoWSw7sGxKlHBoveamHw3ddcDB1UqDAu/9YE/X3XdIzoeHPTE1ATOBJJXCb3czA92ZO7yyk5NriCWGHItHekW98IY21VFhLufyoxOPfh/y1o7cNrHp2H4KxDnXJDwTTCQ4AheAqBSafRevLg/RxtVQeUly2mhhDdwIajVinMjElMkT4pQ2TpXbti+kCc8vvyL+btlxXncZe5uGnnCbLBHdTVThIYqylk6IrN2J1mKZDkAWOTn3xLclM/b8ltSuamEi4nHXleSZPBIhHBudduJVLi6lwfsZftO3neYpYbOlOIRMNzQjmJmxB3oUlp4fp6exJkwuaVIal82R9zseGiwIDAQAB',
-    permissions: ['sidePanel'],
+    permissions: ['sidePanel', 'storage', 'identity'],
     // Lets extension pages call the API without CORS. Add the deployed
     // API origin here when the backend is hosted.
     host_permissions: ['http://localhost:3000/*'],
     action: {
       default_title: 'Open MailCraft',
     },
+    oauth2: {
+      client_id: "68004933678-ijjkaoe1obb235g4ikc2c2088aec1ccf.apps.googleusercontent.com",
+      scopes: [
+        "https://www.googleapis.com/auth/gmail.modify",
+        "https://www.googleapis.com/auth/gmail.labels.readonly"
+      ]
+    }
   },
 });

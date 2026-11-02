@@ -33,10 +33,20 @@ Other scripts: `npm run build` (production build to `.output/chrome-mv3`),
 ## Layout
 
 ```
-entrypoints/
-  background.ts         service worker: opens the side panel on icon click
+src/entrypoints/
+  background.ts         service worker: opens the side panel on icon click, handles OAuth login/logout
   sidepanel/            side panel page (index.html → main.tsx → App.tsx)
-lib/api.ts              backend client (base URL from WXT_API_URL)
-assets/tailwind.css     Tailwind import + theme tokens
-wxt.config.ts           manifest: permissions, host permissions
+src/lib/api.ts              backend client (base URL from WXT_API_URL)
+src/lib/auth.ts             auth related api requests
+src/assets/tailwind.css     Tailwind import + theme imports
+src/assets/theme/           Minecraft pixel theme: tokens, base, .mc-* components, textures
+src/components/              UI components (Button, Card, TextInput, ProgressBar)
+src/pages/                   UI pages
+wxt.config.ts           manifest, permissions, `@graphics` alias -> ../graphics
 ```
+
+## UI theme
+
+All screens use a shared Minecraft-style pixel theme (palette, pixel font,
+beveled blocks). Read [THEME.md](./THEME.md) before adding colors,
+components or screens.

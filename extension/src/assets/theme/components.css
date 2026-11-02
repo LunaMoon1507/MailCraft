@@ -1,0 +1,365 @@
+/* ==========================================================================
+   MailCraft "Minecraft" theme: component classes (.mc-*)
+   --------------------------------------------------------------------------
+   Naming: .mc-<block>, .mc-<block>--<variant>, .mc-<block>__<part>
+   Every class lives in @layer components, so a Tailwind utility on the same
+   element always wins (e.g. <div class="mc-panel p-0">).
+
+   THE BEVEL RECIPE
+   Most blocks share one look: a face color, a light edge top-left, a dark
+   edge bottom-right, and a 1-game-pixel outline with notched (missing)
+   corners. A block opts in with .mc-bevel and sets three variables:
+       --mc-face   fill color
+       --mc-light  top/left highlight
+       --mc-dark   bottom/right shade
+   Swap --mc-light and --mc-dark to make something look pressed or sunken.
+
+   Docs: extension/THEME.md
+   ========================================================================== */
+
+@layer components {
+  /* ---------------------------------------------------------------- bevel */
+  /* Shared recipe. To give a new block the bevel, add its selector to BOTH
+     lists below (and to the inset list if it should look sunken), then
+     override the --mc-* variables in its own rule further down. */
+  .mc-bevel,
+  .mc-panel,
+  .mc-btn,
+  .mc-input,
+  .mc-status,
+  .mc-slot,
+  .mc-bar {
+    --mc-face: var(--color-surface);
+    --mc-light: var(--color-surface-raised);
+    --mc-dark: var(--color-outline);
+    --mc-edge: var(--color-outline);
+    background-color: var(--mc-face);
+    border-radius: 0;
+    box-shadow:
+      inset var(--px) var(--px) 0 var(--mc-light),
+      inset calc(var(--px) * -1) calc(var(--px) * -1) 0 var(--mc-dark),
+      0 calc(var(--px) * -1) 0 var(--mc-edge),
+      0 var(--px) 0 var(--mc-edge),
+      calc(var(--px) * -1) 0 0 var(--mc-edge),
+      var(--px) 0 0 var(--mc-edge);
+  }
+  /* Sunken look: wells, slots, inputs, bar tracks. */
+  .mc-bevel--inset,
+  .mc-input,
+  .mc-slot,
+  .mc-bar {
+    --mc-light: var(--color-outline);
+    --mc-dark: var(--color-surface-raised);
+  }
+
+  /* ---------------------------------------------------------------- app */
+  /* Wrapper for a whole screen in the side panel. */
+  .mc-app {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--px) * 6);
+    min-height: 100vh;
+    padding: calc(var(--px) * 4);
+  }
+
+  /* ---------------------------------------------------------------- text */
+  .mc-title {
+    font-size: var(--text-pixel-lg);
+    line-height: 1;
+    color: var(--color-parchment);
+    text-shadow:
+      calc(var(--px) / 2) calc(var(--px) / 2) 0 var(--color-grassfield),
+      var(--px) var(--px) 0 var(--color-outline);
+    letter-spacing: 1px;
+  }
+  .mc-subtitle {
+    font-size: var(--text-pixel-sm);
+    color: var(--color-text-muted);
+    text-shadow: var(--mc-text-shadow);
+  }
+  /* Small all-caps label: panel headings, field labels, stat names. */
+  .mc-label,
+  .mc-panel__title {
+    display: block;
+    font-size: var(--text-pixel-sm);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    text-shadow: var(--mc-text-shadow);
+  }
+  .mc-error {
+    font-size: var(--text-pixel-sm);
+    color: var(--color-redstone-light);
+    text-shadow: var(--mc-text-shadow);
+    overflow-wrap: anywhere;
+  }
+  .mc-error::before {
+    content: '! ';
+  }
+  /* Text-styled button for secondary actions ("Already have an account?"). */
+  .mc-link {
+    display: inline;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    word-spacing: inherit;
+    font-size: var(--text-pixel-sm);
+    color: var(--color-accent);
+    text-shadow: var(--mc-text-shadow);
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+    cursor: pointer;
+  }
+  .mc-link:hover {
+    color: var(--color-parchment);
+  }
+
+  /* ---------------------------------------------------------------- panel */
+  /* A card/window. Default face is dark soil. */
+  .mc-panel {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--px) * 3);
+    padding: calc(var(--px) * 4);
+    color: var(--color-text);
+  }
+  /* Grass-topped dirt block: a strip of pixel grass drips over the top edge. */
+  .mc-panel--grass {
+    padding-top: calc(var(--px) * 8);
+  }
+  .mc-panel--grass::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: calc(var(--px) * 6);
+    background-image: var(--tex-grass-cap);
+    background-size: var(--tex-size) calc(var(--px) * 6);
+    background-repeat: repeat-x;
+    image-rendering: pixelated;
+    pointer-events: none;
+  }
+  /* Oak-plank panel: wood texture, darkened so text stays readable. */
+  .mc-panel--wood {
+    --mc-light: var(--color-milk-tea);
+    --mc-dark: var(--color-solid-brown);
+    background-image:
+      linear-gradient(rgb(23 13 6 / 0.55), rgb(23 13 6 / 0.55)),
+      var(--tex-planks);
+    background-size: auto, var(--tex-size) var(--tex-size);
+    image-rendering: pixelated;
+  }
+  /* ---------------------------------------------------------------- button */
+  .mc-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--px) * 2);
+    border: 0;
+    font: inherit;
+    word-spacing: inherit; /* form controls reset it; base.css sets it */
+    font-size: var(--text-pixel-md);
+    line-height: 1;
+    color: var(--mc-ink, var(--color-parchment));
+    text-shadow: var(--mc-text-shadow);
+    cursor: pointer;
+    user-select: none;
+    /* Leave room for the outline so neighbors don't overlap it. */
+    margin: var(--px);
+  }
+  .mc-btn:hover {
+    filter: brightness(1.12);
+  }
+  .mc-btn:active:not(:disabled) {
+    transform: translateY(var(--px));
+    --mc-light: var(--mc-press-light);
+    --mc-dark: var(--mc-press-dark);
+  }
+  .mc-btn:disabled {
+    cursor: not-allowed;
+    filter: grayscale(0.85) brightness(0.7);
+  }
+
+  /* Variants: each sets face / light / dark (and the pressed swap). */
+  /* Face is grassfield (not matcha) so white text passes WCAG AA (5.2:1). */
+  .mc-btn--grass {
+    --mc-face: var(--color-grassfield);
+    --mc-light: var(--color-matcha);
+    --mc-dark: var(--color-moss);
+    --mc-press-light: var(--color-moss);
+    --mc-press-dark: var(--color-matcha);
+    --mc-ink: #fff;
+  }
+  .mc-btn--wood {
+    --mc-face: var(--color-burma-teak);
+    --mc-light: var(--color-milk-tea);
+    --mc-dark: var(--color-solid-brown);
+    --mc-press-light: var(--color-solid-brown);
+    --mc-press-dark: var(--color-milk-tea);
+  }
+  .mc-btn--danger {
+    --mc-face: var(--color-redstone);
+    --mc-light: #e0574a;
+    --mc-dark: #6e1a12;
+    --mc-press-light: #6e1a12;
+    --mc-press-dark: #e0574a;
+    --mc-ink: #fff;
+  }
+
+  /* Sizes: padding is always whole game pixels. */
+  .mc-btn--sm {
+    padding: calc(var(--px) * 2) calc(var(--px) * 3);
+    font-size: var(--text-pixel-sm);
+  }
+  .mc-btn--md {
+    padding: calc(var(--px) * 3) calc(var(--px) * 4);
+  }
+  .mc-btn--lg {
+    padding: calc(var(--px) * 4) calc(var(--px) * 6);
+    font-size: var(--text-pixel-lg);
+  }
+  .mc-btn--block {
+    width: calc(100% - var(--px) * 2);
+  }
+
+  /* ---------------------------------------------------------------- input */
+  .mc-field {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--px) * 2);
+  }
+  .mc-input {
+    --mc-face: var(--color-outline);
+    --mc-edge: var(--color-solid-brown);
+    width: calc(100% - var(--px) * 2);
+    margin: 0 var(--px);
+    padding: calc(var(--px) * 2) calc(var(--px) * 3);
+    border: 0;
+    font: inherit;
+    word-spacing: inherit;
+    font-size: var(--text-pixel-md);
+    color: var(--color-parchment);
+    caret-color: var(--color-accent);
+  }
+  .mc-input::placeholder {
+    color: var(--color-solid-brown);
+  }
+  .mc-input:hover {
+    --mc-edge: var(--color-burma-teak);
+  }
+  .mc-input:focus,
+  .mc-input:focus-visible {
+    outline: none;
+    --mc-edge: var(--color-accent);
+  }
+  .mc-input[aria-invalid='true'] {
+    --mc-edge: var(--color-redstone);
+  }
+
+  /* ---------------------------------------------------------------- status */
+  /* A tiny square "block" indicator. */
+  .mc-status {
+    display: inline-block;
+    flex: none;
+    width: calc(var(--px) * 4);
+    height: calc(var(--px) * 4);
+    margin: var(--px);
+  }
+  .mc-status--ok {
+    --mc-face: var(--color-matcha);
+    --mc-light: var(--color-young-green);
+    --mc-dark: var(--color-grassfield);
+  }
+  .mc-status--error {
+    --mc-face: var(--color-redstone);
+    --mc-light: #e8665a;
+    --mc-dark: #7d1f17;
+  }
+  .mc-status--pending {
+    --mc-face: var(--color-milk-tea);
+    --mc-light: #e0a868;
+    --mc-dark: var(--color-burma-teak);
+    animation: var(--animate-blink);
+  }
+
+  /* ---------------------------------------------------------------- slot */
+  /* Inventory slot: sunken square for an icon or a big number. */
+  .mc-slot {
+    --mc-face: #1f1209;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: calc(var(--px) * 14);
+    height: calc(var(--px) * 14);
+    margin: var(--px);
+  }
+  .mc-slot > img {
+    width: 75%;
+    height: 75%;
+    object-fit: contain;
+  }
+
+  /* ---------------------------------------------------------------- stats */
+  /* Label/value row, e.g. "STREAK ...... 4". */
+  .mc-stat {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: calc(var(--px) * 2);
+    padding: calc(var(--px) * 1) 0;
+    border-bottom: 2px dashed var(--color-surface-raised);
+  }
+  .mc-stat:last-child {
+    border-bottom: 0;
+  }
+  .mc-stat__value {
+    color: var(--color-parchment);
+    text-shadow: var(--mc-text-shadow);
+  }
+
+  /* Big green number, like the level above the in-game XP bar. */
+  .mc-level {
+    font-size: var(--text-pixel-xl);
+    line-height: 1;
+    color: var(--color-young-green);
+    text-shadow:
+      calc(var(--px) / 2) calc(var(--px) / 2) 0 var(--color-grassfield),
+      var(--px) var(--px) 0 var(--color-outline);
+  }
+
+  /* ---------------------------------------------------------------- bar */
+  /* Segmented progress bar (XP, cleanup progress). Set the fill with an
+     inline width: <div class="mc-bar__fill" style="width: 40%">. */
+  .mc-bar {
+    --mc-face: #1f1209;
+    position: relative;
+    height: calc(var(--px) * 5);
+    margin: var(--px);
+    overflow: hidden;
+  }
+  .mc-bar__fill {
+    height: 100%;
+    background: linear-gradient(
+      to bottom,
+      var(--color-young-green) 0 25%,
+      var(--color-matcha) 25% 75%,
+      var(--color-grassfield) 75% 100%
+    );
+    transition: width 400ms steps(8);
+  }
+  /* Notches every 10%, drawn over the fill. */
+  .mc-bar::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      to right,
+      transparent 0 calc(10% - var(--px) / 2),
+      var(--color-outline) calc(10% - var(--px) / 2) 10%
+    );
+    pointer-events: none;
+  }
+}
