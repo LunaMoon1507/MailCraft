@@ -1,6 +1,7 @@
 import express from 'express';
 import { healthRouter } from './routes/health.js';
 import { users } from './routes/users.js';
+import { pointsRouter } from './routes/points.js';
 
 export function createApp() {
   const app = express();
@@ -8,6 +9,7 @@ export function createApp() {
 
   app.use('/api/health', healthRouter);
   app.use('/api/users', users);
+  app.use('/api/points', pointsRouter);
 
   return app;
 }
