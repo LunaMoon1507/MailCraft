@@ -29,6 +29,28 @@ export default function Profile() {
         }
     }
 
+
+    // test that the points work
+    async function testPoints() {
+        try {
+            await fetch("http://localhost:3000/api/points/action", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    userId: stats!.user_id,
+                    actionType: "DELETE"
+                })
+            })
+
+            loadProfile();
+        }
+        catch (error) {
+            console.log(error)
+        }
+    }
+
     useEffect(()=> {
         loadProfile();
     }, [token, isAuthenticated])
@@ -74,6 +96,7 @@ export default function Profile() {
             }
             <div className="flex flex-wrap gap-px2">
                 <Button variant='danger' size='sm' onClick={handleLogout}>Log Out</Button>
+                <Button variant='primary' size='sm' onClick={testPoints}>Test points adding</Button>
             </div>
         </Card>
     )

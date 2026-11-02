@@ -24,7 +24,7 @@ pointsRouter.post('/action', async (req: Request, res: Response) => {
 
     try {
         const bigIntUserId = BigInt(userId);
-        const result = await prisma.$transaction(async (tx: any) => {
+        const result = await prisma.$transaction(async (tx) => {
             // Record in PointHistory
             await tx.pointHistory.create({
                 data: {
@@ -35,10 +35,10 @@ pointsRouter.post('/action', async (req: Request, res: Response) => {
             });
 
             // Increment user points
-            const updatedUser = await tx.users.update({
-                where: { id: bigIntUserId },
-                data: { points: { increment: pointsToAdd } },
-                select: { id: true, points: true },
+            const updatedUser = await tx.userStats.update({
+                where: { user_id: bigIntUserId },
+                data: { xp: { increment: pointsToAdd } },
+                select: { user_id: true, xp: true },
             });
 
             return updatedUser;
@@ -47,7 +47,7 @@ pointsRouter.post('/action', async (req: Request, res: Response) => {
         return res.status(200).json({
             success: true,
             awardedPoints: pointsToAdd,
-            totalPoints: typeof result.points === 'bigint' ? Number(result.points) : result.points
+            totalPoints: typeof result.xp === 'bigint' ? Number(result.xp) : result.xp
         });
 
     } catch (error: any) {
@@ -66,18 +66,18 @@ pointsRouter.get('/:userId', async (req: Request, res: Response) => {
     }
 
     try {
-        const user = await prisma.users.findUnique({
-            where: { id: BigInt(userId) },
-            select: { id: true, points: true },
+        const stats = await prisma.userStats.findUnique({
+            where: { user_id: BigInt(userId) },
+            select: { user_id: true, xp: true },
         });
 
-        if (!user) {
+        if (!stats) {
             return res.status(404).json({ error: 'User not found.' });
         }
 
         return res.status(200).json({
-            userId: user.id.toString(),
-            points: typeof user.points === 'bigint' ? Number(user.points) : (user.points ?? 0)
+            userId: stats.user_id.toString(),
+            points: typeof stats.xp === 'bigint' ? Number(stats.xp) : (stats.xp ?? 0)
         });
     } catch (error) {
         console.error('Error fetching user points:', error);
