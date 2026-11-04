@@ -1,0 +1,130 @@
+// interfaces for the data returned by Gmail API
+
+// data returned by the list api call
+interface ListResult {
+    messages: {
+        id: string,
+        threadId: string
+    }[],
+    nextPageToken: string,
+    resultSizeEstimate: number
+}
+
+// data returned by the get (single email) api call
+interface EmailRawData {
+    id: string,
+    labelIds: string[], // ex: UNREAD, INBOX, CATEGORY_PROMOTIONS, CATEGORY_UPDATES, numbers for custom labels
+    payload: {
+        headers: {name: string, value: string}[] // relevant headers: From, Subject, Date
+    }
+}
+
+// info to display on frontend
+export interface Email {
+    labelIds: string[];
+    from: string;
+    subject: string;
+}
+
+// Calls to the Gmail API
+
+async function getGoogleAPIToken() {
+    const authResult = await browser.identity.getAuthToken({
+        interactive: false,
+    });
+
+    return authResult.token;
+}
+
+// helper function for any gmail api calls
+// automatically adds the authorization header
+async function fetchGmail(url: URL, options: RequestInit = {}) {
+    const googleToken = await getGoogleAPIToken();
+    if (!googleToken) {
+        throw new Error("No connection to Google OAuth.")
+    }
+    const res = await fetch(url, {
+        ...options,
+        headers: {
+        ...options.headers,
+        Authorization: `Bearer ${googleToken}`,
+        },
+    })
+
+    return res;
+}
+
+// get list of email IDs
+async function getEmailList() {
+    console.log("getting emails");
+
+    const url = new URL("https://gmail.googleapis.com/gmail/v1/users/me/messages");
+    const params = { 
+        maxResults: "25", 
+        includeSpamTrash: "false",
+    };
+    url.search = new URLSearchParams(params).toString();
+    url.searchParams.append("labelIds[]", "UNREAD")
+
+    const res = await fetchGmail(url, {
+        method: "GET",
+    })
+
+    if (!res.ok) {
+        throw new Error(`Google API error ${res.status}`);
+    }
+
+    const data = await res.json() as ListResult;  
+    return data;
+}
+
+// gets one email by id
+async function getEmail(id: string) {
+    const url = new URL(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}`)
+    const params = {
+        format: "METADATA",
+    }
+    url.search = new URLSearchParams(params).toString()
+
+    const res = await fetchGmail(url, {
+        method: "GET",
+    })
+
+    if (!res.ok) {
+        throw new Error(`Google API error ${res.status}`);
+    }
+
+    const data = await res.json() as EmailRawData;
+    return data
+}
+
+
+async function processEmails(emailList: ListResult) {
+    const promises = emailList.messages.map(async (message) => {
+        const email = await getEmail(message.id)
+
+        return email
+    })
+
+    const emails = await Promise.all(promises);
+
+    // keep only the info needed to display: lablels, from, subject
+    const mappedEmails: Email[] = emails.map((email) => ({
+        labelIds: email.labelIds,
+        from: email.payload.headers.find(
+            (h) => h.name.toLowerCase() === "from"
+        )?.value ?? "",
+        subject: email.payload.headers.find(
+            (h) => h.name.toLowerCase() === "subject"
+        )?.value ?? ""
+    }));
+
+    console.log(mappedEmails)
+    return mappedEmails
+}
+
+export async function getEmails() {
+    const emailList = await getEmailList();
+    const emails = await processEmails(emailList);
+    return emails;
+}
