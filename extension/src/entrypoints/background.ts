@@ -131,7 +131,7 @@ async function captureAndSendInboxSnapshot() {
 
     const todayStr = new Date().toISOString().split('T')[0];
 
-    await fetch('http://localhost:5000/api/snapshots', {
+    await fetch('http://localhost:3000/api/snapshots', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
