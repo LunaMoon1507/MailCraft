@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { prisma } from '../prisma.js';
+import { getLoggedInUser } from './auth.js';
 
 export const pointsRouter = Router();
 
@@ -12,11 +13,21 @@ function levelForXp(xp: number) {
     return Math.floor(Math.sqrt(Math.max(0, xp) / 10)) + 1;
 }
 
+// Most emails one request can award points for (stops a client sending count: 1000000)
+const MAX_ACTIONS_PER_REQUEST = 500;
+
 pointsRouter.post('/action', async (req: Request, res: Response) => {
-    const { userId, actionType, count = 1 } = req.body;
-    if (!userId || !actionType) {
+    // The user comes from the login token, never from the request body,
+    // so nobody can award points to someone else's account.
+    const user = getLoggedInUser(req);
+    if (!user) {
+        return res.status(401).json({ error: 'Not logged in or session expired' });
+    }
+    const userId = user.sub;
+    const { actionType, count = 1 } = req.body ?? {};
+    if (typeof actionType !== 'string') {
         return res.status(400).json({ 
-            error: 'Missing required fields: userId and actionType are required.' 
+            error: 'Missing required field: actionType is required.' 
         });
     }
     const type = actionType.toUpperCase();
@@ -28,7 +39,12 @@ pointsRouter.post('/action', async (req: Request, res: Response) => {
     
     const pointsPerAction = POINTS_PER_ACTION[type] ?? 1;
 
-    const actionCount = Math.max(1, Number(count));
+    const actionCount = Number(count);
+    if (!Number.isInteger(actionCount) || actionCount < 1 || actionCount > MAX_ACTIONS_PER_REQUEST) {
+        return res.status(400).json({
+            error: `count must be a whole number from 1 to ${MAX_ACTIONS_PER_REQUEST}.`
+        });
+    }
     const pointsToAdd = pointsPerAction * actionCount;
 
     try {
@@ -129,9 +145,17 @@ pointsRouter.post('/action', async (req: Request, res: Response) => {
 });
 
 pointsRouter.get('/:userId', async (req: Request, res: Response) => {
+    const user = getLoggedInUser(req);
+    if (!user) {
+        return res.status(401).json({ error: 'Not logged in or session expired' });
+    }
     const { userId } = req.params;
-    if (!userId || typeof userId !== 'string') {
+    if (!userId || typeof userId !== 'string' || !/^\d+$/.test(userId)) {
         return res.status(400).json({ error: 'Invalid user ID.' });
+    }
+    // Users can only read their own points
+    if (userId !== user.sub) {
+        return res.status(403).json({ error: 'You can only view your own points.' });
     }
 
     try {

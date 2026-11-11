@@ -88,3 +88,28 @@ export async function getProfile() {
     throw new Error("Please log in to view your profile.");
   }
 }
+
+export interface AwardPointsResponse {
+  success: true;
+  awardedPoints: number;
+  totalPoints: number;
+  level: number;
+  leveledUp: boolean;
+  bestDayCount: number;
+  bestDayDate: string;
+}
+
+// Logs a cleanup action for the logged-in user and returns their updated points.
+// The server works out the user from the login token and the XP from the action.
+export async function awardPoints(actionType: 'ARCHIVE' | 'DELETE' | 'LABEL', count = 1) {
+  const res = await makeAuthRequest(`${API_URL}/api/points/action`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ actionType, count }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? `Awarding points failed: HTTP ${res.status}`);
+  }
+  return (await res.json()) as AwardPointsResponse;
+}
