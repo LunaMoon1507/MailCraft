@@ -19,11 +19,21 @@ interface EmailRawData {
     }
 }
 
+export interface Label {
+    id: string,
+    name: string
+}
+
+interface LabelListRawData {
+    labels: Label[]
+}
+
 // info to display on frontend
 export interface Email {
-    labelIds: string[];
-    from: string;
-    subject: string;
+    id: string,
+    labelIds: string[],
+    from: string,
+    subject: string,
 }
 
 // Calls to the Gmail API
@@ -83,6 +93,7 @@ async function getEmail(id: string) {
     const url = new URL(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}`)
     const params = {
         format: "METADATA",
+        q: "label:inbox",
     }
     url.search = new URLSearchParams(params).toString()
 
@@ -110,6 +121,7 @@ async function processEmails(emailList: ListResult) {
 
     // keep only the info needed to display: lablels, from, subject
     const mappedEmails: Email[] = emails.map((email) => ({
+        id: email.id,
         labelIds: email.labelIds,
         from: email.payload.headers.find(
             (h) => h.name.toLowerCase() === "from"
@@ -127,4 +139,41 @@ export async function getEmails() {
     const emailList = await getEmailList();
     const emails = await processEmails(emailList);
     return emails;
+}
+
+export async function getLabels() {
+    const url = new URL("https://gmail.googleapis.com/gmail/v1/users/me/labels")
+    const labelRes = await fetchGmail(url, {
+        method: "GET",
+    })
+
+    if (!labelRes.ok) {
+        throw new Error("Error fetching labels form Gmail API");
+    }
+
+    const data = await labelRes.json() as LabelListRawData;
+    const cleaned = data.labels.map((label) => ({
+            id: label.id,
+            name: label.name
+        })
+    ) as Label[];
+    console.log(cleaned)
+    return cleaned;
+}
+
+export async function trashEmail(id: string) {
+    const url = new URL(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}/trash`)
+    const trashRes = await fetchGmail(url, {
+        method: "POST"
+    })
+    
+    if (!trashRes.ok) {
+        return false;
+    }
+
+    const data = await trashRes.json();
+
+    console.log(data);
+
+    return true;
 }
