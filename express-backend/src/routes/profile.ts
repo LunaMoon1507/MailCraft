@@ -7,7 +7,7 @@ export const profileRouter = Router();
 profileRouter.get("/", async (_req, res) => {
     const token = getLoggedInUser(_req)
     if (!token) {
-        res.status(401);
+        res.status(401).json({ error: "Not logged in or session expired" });
         return;
     }
     try {
