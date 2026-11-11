@@ -1,7 +1,7 @@
 // Thin wrapper around the MailCraft backend. All server calls go through
 // here so the base URL, headers and (later) the JWT live in one place.
 import { storage } from '#imports';
-import { authToken } from './auth';
+import { authToken, isTokenExpiring, refreshAccessToken } from './auth';
 
 export const API_URL: string = import.meta.env.WXT_API_URL ?? 'http://localhost:3000';
 
@@ -18,24 +18,39 @@ export async function getHealth(signal?: AbortSignal): Promise<HealthResponse> {
 }
 
 // helper function for any api calls that need the user to be signed in
-// automatically adds the authorization header
+// automatically adds the authorization header, and renews an expired
+// access token with the refresh token so the user stays logged in
 async function makeAuthRequest(url: string, options: RequestInit = {}) {
-  const token = await authToken.getValue();
+  let token = await authToken.getValue();
   if (!token) {
     throw new Error("Please log in");
   }
-  const res = await fetch(url, {
+
+  // Renew ahead of time if the token is about to expire (saves a failed request).
+  if (isTokenExpiring(token)) {
+    token = (await refreshAccessToken()) ?? token;
+  }
+
+  const send = (accessToken: string) => fetch(url, {
     ...options,
     headers: {
       ...options.headers,
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${accessToken}`,
     },
-  })
+  });
+
+  let res = await send(token);
 
   if (res.status === 401) {
-    // if token expired, remove it
-    await authToken.removeValue();
-    throw new Error("Session expired, please log in");
+    // Access token rejected: try once to renew it, then retry the request.
+    const newToken = await refreshAccessToken();
+    if (!newToken) {
+      throw new Error("Session expired, please log in");
+    }
+    res = await send(newToken);
+    if (res.status === 401) {
+      throw new Error("Session expired, please log in");
+    }
   }
 
   return res;
