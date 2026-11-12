@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import Card from "@/components/Card"
 import InboxItem from "@/components/InboxItem";
-import { getEmails, getLabels, type Email, type Label, trashEmail } from "@/lib/gmailApi";
+import { getEmails, getLabels, type Email, type Label, trashEmail, relabelEmail, archiveEmail } from "@/lib/gmailApi";
+import { awardPoints } from "@/lib/api";
 
 export default function CleanupGame() {
     const [emails, setEmails] = useState<Email[]>([]);
@@ -22,19 +23,50 @@ export default function CleanupGame() {
     async function trash(id: string) {
         const result = await trashEmail(id);
         if (!result) {
-            console.log("ERROR")
+            console.log("ERROR with trash")
         }
         else {
-            removeEmailFromList(id);
+            try {
+                const points = await awardPoints("DELETE");
+                removeEmailFromList(id);
+            }
+            catch {
+                console.log("Error when awarding points")
+            }
         }
     }
 
-    async function relabel(id: string) {
-        return;
+    async function relabel(id: string, labelId: string) {
+        const result = await relabelEmail(id, labelId)
+        if (!result) {
+            console.log("ERROR with relabel")
+        }
+        else {
+            try {
+                const points = await awardPoints("LABEL");
+                removeEmailFromList(id);
+            }
+            catch {
+                console.log("Error when awarding points")
+            }
+            
+        }
     }
 
     async function archive(id: string) {
-        return;
+        const result = await archiveEmail(id)
+        if (!result) {
+            console.log("ERROR with archive")
+        }
+        else {
+            try {
+                const points = await awardPoints("ARCHIVE");
+                removeEmailFromList(id);
+            }
+            catch {
+                console.log("Error when awarding points")
+            }
+        }
     }
 
     useEffect(()=> {
@@ -43,16 +75,16 @@ export default function CleanupGame() {
     }, [])
 
     return (
-        <Card variant="primary" className="max-w-full">
+        <Card variant="secondary" className="max-w-full">
             <div>
                 {labels.map((label) => 
                     <div key={label.name}>{label.name}</div>
                     )
                 }
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-4">
                 {emails.map((email: Email)=>
-                    <InboxItem key={email.id} email={email} relabel={relabel} archive={archive} trash={trash}/>
+                    <InboxItem key={email.id} email={email} relabel={relabel} archive={archive} trash={trash} skip={removeEmailFromList}/>
                 )}
             </div>
             

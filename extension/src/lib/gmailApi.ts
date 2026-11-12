@@ -72,9 +72,9 @@ async function getEmailList() {
     const params = { 
         maxResults: "25", 
         includeSpamTrash: "false",
+        labelIds: "INBOX",
     };
     url.search = new URLSearchParams(params).toString();
-    url.searchParams.append("labelIds[]", "UNREAD")
 
     const res = await fetchGmail(url, {
         method: "GET",
@@ -93,7 +93,6 @@ async function getEmail(id: string) {
     const url = new URL(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}`)
     const params = {
         format: "METADATA",
-        q: "label:inbox",
     }
     url.search = new URLSearchParams(params).toString()
 
@@ -172,6 +171,53 @@ export async function trashEmail(id: string) {
     }
 
     const data = await trashRes.json();
+
+    console.log(data);
+
+    return true;
+}
+
+export async function archiveEmail(id: string) {
+    const url = new URL(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}/modify`)
+    const archiveRes = await fetchGmail(url, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            removeLabelIds: ["INBOX"],
+        }),
+    })
+
+    if (!archiveRes.ok) {
+        return false;
+    }
+
+    const data = await archiveRes.json();
+
+    console.log(data);
+
+    return true;
+}
+
+export async function relabelEmail(id: string, newLabelId: string) {
+    const url = new URL(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}/modify`)
+    const relabelRes = await fetchGmail(url, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            removeLabelIds: ["INBOX"],
+            addLabelIds: [newLabelId]
+        }),
+    })
+
+    if (!relabelRes.ok) {
+        return false;
+    }
+
+    const data = await relabelRes.json();
 
     console.log(data);
 
