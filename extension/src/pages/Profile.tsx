@@ -1,7 +1,7 @@
 import Card from "@/components/Card";
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect } from "react";
-import { type ProfileResponse, getProfile } from "@/lib/api";
+import { type ProfileResponse, getProfile, awardPoints } from "@/lib/api";
 import { logout } from "@/lib/auth";
 import Button from "@/components/Button";
 import ProgressBar from "@/components/ProgressBar";
@@ -33,17 +33,7 @@ export default function Profile() {
     // test that the points work
     async function testPoints() {
         try {
-            await fetch("http://localhost:3000/api/points/action", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    userId: stats!.user_id,
-                    actionType: "DELETE"
-                })
-            })
-
+            await awardPoints("DELETE");
             loadProfile();
         }
         catch (error) {

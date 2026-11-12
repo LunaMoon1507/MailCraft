@@ -17,4 +17,10 @@ export const env = {
   directUrl: required('DIRECT_URL'),
   jwtSecret: required('JWT_SECRET'),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '7d',
+  // Short-lived token sent with every API request.
+  jwtAccessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN ?? '15m',
+  // Long-lived token used only to get a new access token from /api/auth/refresh.
+  jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN ?? '30d',
+  // Optional separate secret for refresh tokens; falls back to JWT_SECRET.
+  jwtRefreshSecret: process.env.JWT_REFRESH_SECRET ?? required('JWT_SECRET'),
 } as const;

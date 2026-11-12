@@ -15,29 +15,81 @@ interface JWTToken {
   "sub": string,
   "username": string,
   "roles": string[],
+  "type"?: "access" | "refresh",
   "iat": number,
   "exp": number
 }
 
-function verifyToken(token: string) {
-    return jwt.verify(token, env.jwtSecret);
+type ExpiresIn = NonNullable<jwt.SignOptions["expiresIn"]>;
+
+// Issues a short-lived access token and a long-lived refresh token for a user.
+function issueTokens(user: { id: bigint, username: string }) {
+    const payload = {
+        sub: user.id.toString(),
+        username: user.username,
+        roles: ['user'], // fix this if we add different user roles
+    };
+    const token = jwt.sign({ ...payload, type: "access" }, env.jwtSecret,
+        { expiresIn: env.jwtAccessExpiresIn as ExpiresIn });
+    const refreshToken = jwt.sign({ ...payload, type: "refresh" }, env.jwtRefreshSecret,
+        { expiresIn: env.jwtRefreshExpiresIn as ExpiresIn });
+    return { token, refreshToken };
 }
-function decodeToken(token: string) {
-    return jwt.decode(token) as JWTToken;
+
+// Returns the token's payload, or null if it is expired, tampered with or the wrong kind.
+// jwt.verify throws on an expired token, so catch it here instead of crashing the request.
+function verifyToken(token: string, kind: "access" | "refresh") {
+    try {
+        const secret = kind === "access" ? env.jwtSecret : env.jwtRefreshSecret;
+        const payload = jwt.verify(token, secret) as JWTToken;
+        // Never accept a refresh token as an access token (or vice versa).
+        // Older access tokens have no "type", so only reject a mismatching one.
+        if (kind === "refresh" ? payload.type !== "refresh" : payload.type === "refresh") {
+            return null;
+        }
+        return payload;
+    }
+    catch {
+        return null;
+    }
 }
 
 export function getLoggedInUser(req: Request) {
     const authHeader = req.headers.authorization;
-    if (!authHeader) {
+    if (!authHeader?.startsWith("Bearer ")) {
         return null;
     }
     const token = authHeader.substring(7);
-    if (!verifyToken(token)) {
-        return null;
-    }
-    const payload = decodeToken(token);
-    return payload;
+    return verifyToken(token, "access");
 }
+
+// Exchanges a valid refresh token for a new access token + refresh token.
+// The extension calls this when an API request comes back 401.
+authRouter.post("/refresh", async (_req: Request, res: Response) => {
+    const refreshToken = _req.body?.refreshToken;
+    if (typeof refreshToken !== "string") {
+        res.status(400).json({ message: "refreshToken missing" });
+        return;
+    }
+    const payload = verifyToken(refreshToken, "refresh");
+    if (!payload) {
+        res.status(401).json({ message: "Session expired, please log in" });
+        return;
+    }
+    try {
+        // Make sure the account still exists before handing out new tokens.
+        const user = await prisma.users.findUnique({ where: { id: BigInt(payload.sub) } });
+        if (!user) {
+            res.status(401).json({ message: "Session expired, please log in" });
+            return;
+        }
+        res.status(200).json(issueTokens(user));
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Unexpected error, please try again" });
+    }
+})
 
 authRouter.post("/login", async (_req: Request, res: Response) => {
     if (!_req.body) {
@@ -63,14 +115,8 @@ authRouter.post("/login", async (_req: Request, res: Response) => {
             if (!isMatch) {
                 throw new Error(); // go to the catch block
             }
-            const payload = {
-                sub: user.id.toString(),
-                username: user.username,
-                roles: ['user'], // fix this if we add different user roles
-            }
-            const token = jwt.sign(payload, env.jwtSecret, {expiresIn: '1h'});
             console.log("Login success");
-            res.status(200).json({'token': token});
+            res.status(200).json(issueTokens(user));
         }
         catch {
             res.status(400).json({
@@ -124,13 +170,7 @@ authRouter.post("/register", async (_req, res) => {
                     longest_streak: 0,
                     best_day_count: 0,
                 }})
-                const payload = {
-                    sub: user.id.toString(),
-                    username: user.username,
-                    roles: ['user'], // fix this if we add different user roles
-                }
-                const token = jwt.sign(payload, env.jwtSecret, {expiresIn: '1h'});
-                res.status(200).json({'token': token});
+                res.status(200).json(issueTokens(user));
             }
         }
         catch (error) {
