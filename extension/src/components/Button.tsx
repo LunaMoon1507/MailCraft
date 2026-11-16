@@ -9,6 +9,7 @@ export interface ButtonProps extends ComponentProps<'button'> {
   size?: ButtonSize;
   /** Stretch to the full width of the parent. */
   block?: boolean;
+  loading?: boolean;
 }
 
 // primary = grass block, secondary = oak planks, danger = redstone
@@ -30,6 +31,7 @@ export default function Button({
   block = false,
   type = 'button',
   className = '',
+  loading = false,
   children,
   ...props
 }: ButtonProps) {
@@ -38,6 +40,12 @@ export default function Button({
     .join(' ');
   return (
     <button type={type} className={classes} {...props}>
+      {loading && (
+        <span
+          className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent"
+          aria-hidden="true"
+        />
+      )}
       {children}
     </button>
   );
