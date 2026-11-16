@@ -113,3 +113,56 @@ export async function awardPoints(actionType: 'ARCHIVE' | 'DELETE' | 'LABEL', co
   }
   return (await res.json()) as AwardPointsResponse;
 }
+
+// ---- Friends ----
+
+export interface FriendSearchResult {
+  username: string;
+  isSelf: boolean;
+  isFriend: boolean;
+}
+
+export interface Friend {
+  username: string;
+  since: string;
+}
+
+// Reads `{ error }` from a failed response so the UI can show the server's message.
+async function errorFrom(res: Response, fallback: string) {
+  const body = await res.json().catch(() => ({}));
+  return new Error(body.error ?? fallback);
+}
+
+// Exact username match. Returns null when no user has that username.
+export async function searchUser(username: string) {
+  const res = await makeAuthRequest(
+    `${API_URL}/api/friends/search?username=${encodeURIComponent(username)}`,
+  );
+  if (res.status === 404) return null;
+  if (!res.ok) throw await errorFrom(res, 'Search failed, please try again.');
+  return (await res.json()) as FriendSearchResult;
+}
+
+export async function getFriends() {
+  const res = await makeAuthRequest(`${API_URL}/api/friends`);
+  if (!res.ok) throw await errorFrom(res, 'Could not load your friends list.');
+  return (await res.json()) as Friend[];
+}
+
+// Adds the user as a friend; the friendship shows up for both people.
+export async function addFriend(username: string) {
+  const res = await makeAuthRequest(`${API_URL}/api/friends`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username }),
+  });
+  if (!res.ok) throw await errorFrom(res, 'Could not add friend, please try again.');
+}
+
+// Unfriends the user for both people.
+export async function removeFriend(username: string) {
+  const res = await makeAuthRequest(`${API_URL}/api/friends/${encodeURIComponent(username)}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw await errorFrom(res, 'Could not remove friend, please try again.');
+}

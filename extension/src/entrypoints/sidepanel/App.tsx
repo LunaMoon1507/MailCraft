@@ -5,6 +5,7 @@ import Card from '@/components/Card';
 import Login from '@/pages/Login';
 import Profile from '@/pages/Profile';
 import OAuth from '@/pages/OAuth';
+import Friends from '@/pages/Friends';
 import grassBlock from '@graphics/5-grass.png';
 
 type Status =
@@ -78,6 +79,7 @@ export default function App() {
       </Card>
       <Login/>
       <Profile/>
+      <Friends/>
       <OAuth/>
     </main>
   );
