@@ -12,7 +12,7 @@ export function CreatableDropdown({
   items,
   onChangeId,
   onCreate,
-  placeholder = "Select/create new label",
+  placeholder = "Type to create new label",
 }: CreatableDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [value, setValue] = useState(""); // the text that shows for the currently selected label

@@ -9,7 +9,9 @@ export default function CleanupGame() {
     const [emails, setEmails] = useState<Email[]>([]);
     const [labels, setLabels] = useState<Label[]>([]);
     const [selectedLabelId, setSelectedLabelId] = useState("");
+    const [popupMessage, setPopupMessage] = useState("");
 
+    // for the dropdown menu
     async function addLabel(name: string) {
         if (!labels.find(label => label.name == name)) {
             const res = await createLabel(name);
@@ -41,11 +43,12 @@ export default function CleanupGame() {
     async function trash(id: string) {
         const result = await trashEmail(id);
         if (!result) {
-            console.log("ERROR with trash")
+            setPopupMessage("An error occurred, please try again!")
         }
         else {
             try {
                 const points = await awardPoints("DELETE");
+                setPopupMessage(`+${points.awardedPoints} xp`)
                 removeEmailFromList(id);
             }
             catch {
@@ -54,31 +57,37 @@ export default function CleanupGame() {
         }
     }
 
-    async function relabel(id: string, labelId: string) {
-        const result = await relabelEmail(id, labelId)
+    async function relabel(id: string) {
+        if (!selectedLabelId) {
+            setPopupMessage("Please select a label first!")
+            return;
+        }
+
+        const result = await relabelEmail(id, selectedLabelId)
         if (!result) {
-            console.log("ERROR with relabel")
+            setPopupMessage("An error occurred, please try again!")
         }
         else {
             try {
                 const points = await awardPoints("LABEL");
+                setPopupMessage(`+${points.awardedPoints} xp`)
                 removeEmailFromList(id);
             }
             catch {
                 console.log("Error when awarding points")
-            }
-            
+            } 
         }
     }
 
     async function archive(id: string) {
         const result = await archiveEmail(id)
         if (!result) {
-            console.log("ERROR with archive")
+            setPopupMessage("An error occurred, please try again!")
         }
         else {
             try {
                 const points = await awardPoints("ARCHIVE");
+                setPopupMessage(`+${points.awardedPoints} xp`)
                 removeEmailFromList(id);
             }
             catch {
@@ -92,24 +101,33 @@ export default function CleanupGame() {
         fetchLabels();
     }, [])
 
+    useEffect(()=> {
+        if (!popupMessage) {
+            return;
+        }
+
+        const timer = setTimeout(() => {
+        setPopupMessage("");
+        }, 1000);
+
+
+    }, [popupMessage])
+
     return (
-        <Card variant="secondary" className="max-w-full">
+        <Card variant="secondary" className="max-w-full" heading="Email Cleanup">
             <div>
+                Current Label for Relabeling:
                 <CreatableDropdown onChangeId={setSelectedLabelId} onCreate={addLabel} items={labels.filter(label=>label.id.startsWith("Label"))}></CreatableDropdown>
             </div>
-            {selectedLabelId && selectedLabelId}
+            {popupMessage && <div className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 rounded-lg bg-black px-6 py-4 text-center text-white">
+                {popupMessage}
+            </div>
+            }
             <div className="flex flex-col gap-4">
                 {emails.map((email: Email)=>
                     <InboxItem key={email.id} email={email} relabel={relabel} archive={archive} trash={trash} skip={removeEmailFromList}/>
                 )}
-            </div>
-            
+            </div> 
         </Card>
     )
 }
-
-// list (to get the list of all)
-
-// modify to change labels
-// trash (able to undo if made mistake)
-//
