@@ -4,8 +4,11 @@ import InboxItem from "@/components/InboxItem";
 import { CreatableDropdown } from "@/components/CreatableDropdown";
 import { getEmails, getLabels, createLabel, type Email, type Label, trashEmail, relabelEmail, archiveEmail } from "@/lib/gmailApi";
 import { awardPoints } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function CleanupGame() {
+    const {isAuthenticated} = useAuth();
+
     const [emails, setEmails] = useState<Email[]>([]);
     const [labels, setLabels] = useState<Label[]>([]);
     const [selectedLabelId, setSelectedLabelId] = useState("");
@@ -27,6 +30,9 @@ export default function CleanupGame() {
 
     async function fetchEmails() {
         const emailList = await getEmails();
+        if (emailList.length == 0) {
+            setPopupMessage("No more emails to clean up, good job!");
+        }
         setEmails(emailList)
     }
 
@@ -113,6 +119,12 @@ export default function CleanupGame() {
 
     }, [popupMessage])
 
+    if (!isAuthenticated) {
+        return <Card variant="secondary" className="max-w-full" heading="Email Cleanup">
+            <div>Log in to earn points for cleaning your emails!</div>
+            </Card>
+    }
+
     return (
         <Card variant="secondary" className="max-w-full" heading="Email Cleanup">
             <div>
@@ -128,6 +140,10 @@ export default function CleanupGame() {
                     <InboxItem key={email.id} email={email} relabel={relabel} archive={archive} trash={trash} skip={removeEmailFromList}/>
                 )}
             </div> 
+            {
+                emails.length == 0 &&
+                <Button variant="primary" onClick={fetchEmails}>Load more emails</Button>
+            }
         </Card>
     )
 }
