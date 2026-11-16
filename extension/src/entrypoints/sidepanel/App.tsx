@@ -5,6 +5,7 @@ import Card from '@/components/Card';
 import Login from '@/pages/Login';
 import Profile from '@/pages/Profile';
 import OAuth from '@/pages/OAuth';
+import CleanupGame from '@/pages/CleanupGame';
 import Friends from '@/pages/Friends';
 import grassBlock from '@graphics/5-grass.png';
 
@@ -78,6 +79,7 @@ export default function App() {
         </div>
       </Card>
       <Login/>
+      <CleanupGame/>
       <Profile/>
       <Friends/>
       <OAuth/>
