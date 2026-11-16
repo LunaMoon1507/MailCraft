@@ -223,3 +223,28 @@ export async function relabelEmail(id: string, newLabelId: string) {
 
     return true;
 }
+
+export async function createLabel(labelName: string) {
+    const url = new URL(`https://gmail.googleapis.com/gmail/v1/users/me/labels`)
+    const labelRes = await fetchGmail(url, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            name: labelName,
+            messageListVisibility: "show",
+            labelListVisibility: "labelShow"
+        }),
+    })
+
+    if (!labelRes.ok) {
+        return false;
+    }
+
+    const data = await labelRes.json();
+
+    console.log(data);
+
+    return data as Label;
+}

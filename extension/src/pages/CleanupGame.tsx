@@ -1,16 +1,34 @@
 import { useState, useEffect } from "react";
 import Card from "@/components/Card"
 import InboxItem from "@/components/InboxItem";
-import { getEmails, getLabels, type Email, type Label, trashEmail, relabelEmail, archiveEmail } from "@/lib/gmailApi";
+import { CreatableDropdown } from "@/components/CreatableDropdown";
+import { getEmails, getLabels, createLabel, type Email, type Label, trashEmail, relabelEmail, archiveEmail } from "@/lib/gmailApi";
 import { awardPoints } from "@/lib/api";
 
 export default function CleanupGame() {
     const [emails, setEmails] = useState<Email[]>([]);
     const [labels, setLabels] = useState<Label[]>([]);
+    const [selectedLabelId, setSelectedLabelId] = useState("");
 
-    async function fetchEmailData() {
+    async function addLabel(name: string) {
+        if (!labels.find(label => label.name == name)) {
+            const res = await createLabel(name);
+
+            if (res) {
+                setSelectedLabelId(res.id);
+                fetchLabels();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    async function fetchEmails() {
         const emailList = await getEmails();
         setEmails(emailList)
+    }
+
+    async function fetchLabels() {
         const labelList = await getLabels();
         setLabels(labelList);
     }
@@ -70,18 +88,16 @@ export default function CleanupGame() {
     }
 
     useEffect(()=> {
-        fetchEmailData();
-        getLabels();
+        fetchEmails();
+        fetchLabels();
     }, [])
 
     return (
         <Card variant="secondary" className="max-w-full">
             <div>
-                {labels.map((label) => 
-                    <div key={label.name}>{label.name}</div>
-                    )
-                }
+                <CreatableDropdown onChangeId={setSelectedLabelId} onCreate={addLabel} items={labels.filter(label=>label.id.startsWith("Label"))}></CreatableDropdown>
             </div>
+            {selectedLabelId && selectedLabelId}
             <div className="flex flex-col gap-4">
                 {emails.map((email: Email)=>
                     <InboxItem key={email.id} email={email} relabel={relabel} archive={archive} trash={trash} skip={removeEmailFromList}/>
