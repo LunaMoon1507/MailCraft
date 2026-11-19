@@ -1,8 +1,9 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Card from '@/components/Card';
 import Button from '@/components/Button';
 import TextInput from '@/components/TextInput';
 import { useAuth } from '@/hooks/useAuth';
+import { avatarFor } from '@/lib/avatar';
 import {
   type Friend,
   type FriendSearchResult,
@@ -12,7 +13,7 @@ import {
   searchUser,
 } from '@/lib/api';
 
-// Friends block (PBI #10 / SCRUM-41): search by exact username, add with +,
+// Friends tab (PBI #10 / SCRUM-41): search by exact username, add with +,
 // and see/remove current friends. Adding is instant and mutual.
 export default function Friends() {
   const { token, isAuthenticated } = useAuth();
@@ -22,6 +23,7 @@ export default function Friends() {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [listError, setListError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [searching, setSearching] = useState(false);
 
   async function loadFriends() {
     try {
@@ -52,6 +54,7 @@ export default function Friends() {
       return;
     }
     setBusy(true);
+    setSearching(true);
     try {
       const found = await searchUser(username);
       if (found) {
@@ -64,6 +67,7 @@ export default function Friends() {
       setSearchError(error instanceof Error ? error.message : 'Search failed, please try again.');
     } finally {
       setBusy(false);
+      setSearching(false);
     }
   }
 
@@ -100,62 +104,132 @@ export default function Friends() {
   }
 
   return (
-    <Card variant="secondary" heading="Friends">
-      <form onSubmit={handleSearch} className="flex flex-col gap-px2">
-        <TextInput
-          label="Find a friend by username"
-          value={query}
-          updateValue={setQuery}
-          error={searchError}
-          autoComplete="off"
-        />
-        <div>
-          <Button type="submit" variant="primary" size="sm" disabled={busy}>
-            Search
-          </Button>
-        </div>
-      </form>
+    <>
+      <Card variant="secondary" heading="Find a friend">
+        <form onSubmit={handleSearch} noValidate>
+          <TextInput
+            label="Username"
+            value={query}
+            updateValue={setQuery}
+            error={searchError}
+            autoComplete="off"
+            spellCheck={false}
+            trailing={
+              <Button type="submit" variant="primary" size="sm" disabled={busy} loading={searching}>
+                Search
+              </Button>
+            }
+          />
+        </form>
 
-      {result && (
-        <div className="mc-stat items-center">
-          <span>{result.username}</span>
-          {result.isSelf ? (
-            <span className="mc-label">That's you</span>
-          ) : result.isFriend ? (
-            <span className="mc-label">Friends</span>
-          ) : (
-            <Button
-              variant="primary"
-              size="sm"
-              disabled={busy}
-              onClick={() => void handleAdd(result.username)}
-              aria-label={`Add ${result.username} as a friend`}
-            >
-              +
-            </Button>
-          )}
-        </div>
-      )}
+        {result && (
+          <div
+            className="mc-bevel mc-bevel--inset bg-outline m-px1 flex items-center gap-px2 p-px2"
+            role="status"
+            aria-label={`Search result: ${result.username}`}
+          >
+            <Avatar username={result.username} />
+            <span className="mc-stat__value min-w-0 flex-1 break-words">{result.username}</span>
+            {result.isSelf ? (
+              <span className="mc-label">That's you</span>
+            ) : result.isFriend ? (
+              <span className="mc-label">Friends</span>
+            ) : (
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={busy}
+                onClick={() => void handleAdd(result.username)}
+                aria-label={`Add ${result.username} as a friend`}
+              >
+                + Add
+              </Button>
+            )}
+          </div>
+        )}
+      </Card>
 
-      <div className="flex flex-col gap-px2">
-        <span className="mc-label">Your friends ({friends.length})</span>
+      <Card variant="primary" heading={`Your friends (${friends.length})`}>
         {listError && <p className="mc-error">{listError}</p>}
         {friends.length === 0 && !listError && <p>No friends yet. Search for a username above.</p>}
-        {friends.map((friend) => (
-          <div key={friend.username} className="mc-stat items-center">
-            <span>{friend.username}</span>
-            <Button
-              variant="danger"
-              size="sm"
-              disabled={busy}
-              onClick={() => void handleRemove(friend.username)}
-              aria-label={`Remove ${friend.username} from friends`}
-            >
-              Remove
-            </Button>
-          </div>
-        ))}
-      </div>
-    </Card>
+        {friends.length > 0 && (
+          <ul aria-label="Your friends">
+            {friends.map((friend) => (
+              <FriendRow
+                key={friend.username}
+                friend={friend}
+                disabled={busy}
+                onRemove={() => void handleRemove(friend.username)}
+              />
+            ))}
+          </ul>
+        )}
+      </Card>
+    </>
   );
+}
+
+function Avatar({ username }: { username: string }) {
+  return (
+    <span className="mc-slot h-10 w-10">
+      <img src={avatarFor(username)} alt="" />
+    </span>
+  );
+}
+
+const CONFIRM_MS = 3000;
+
+// One friend. Remove takes two clicks: the first turns the button into
+// "Sure?" for a few seconds, the second actually removes.
+function FriendRow({ friend, disabled, onRemove }: { friend: Friend; disabled: boolean; onRemove: () => void }) {
+  const [confirming, setConfirming] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  function handleClick() {
+    if (confirming) {
+      clearTimeout(timer.current);
+      setConfirming(false);
+      onRemove();
+      return;
+    }
+    setConfirming(true);
+    timer.current = setTimeout(() => setConfirming(false), CONFIRM_MS);
+  }
+
+  return (
+    <li className="mc-stat items-center">
+      <Avatar username={friend.username} />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <span className="mc-stat__value break-words">{friend.username}</span>
+        <span className="mc-label">Friends since {formatSince(friend.since)}</span>
+      </div>
+      <Button
+        variant="danger"
+        size="sm"
+        disabled={disabled}
+        onClick={handleClick}
+        onBlur={() => setConfirming(false)}
+        aria-label={
+          confirming
+            ? `Click again to remove ${friend.username} from friends`
+            : `Remove ${friend.username} from friends`
+        }
+      >
+        {confirming ? 'Sure?' : 'Remove'}
+      </Button>
+    </li>
+  );
+}
+
+// "Oct 2" this year, "Oct 2, 2025" otherwise.
+function formatSince(since: string) {
+  const date = new Date(since);
+  if (Number.isNaN(date.getTime())) return 'a while';
+  return date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    ...(date.getFullYear() !== new Date().getFullYear() && { year: 'numeric' }),
+  });
 }

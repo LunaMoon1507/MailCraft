@@ -3,7 +3,7 @@ import Button from '@/components/Button';
 import ProgressBar from '@/components/ProgressBar';
 import { useProfile } from '@/hooks/useProfile';
 import { levelProgress } from '@/lib/levels';
-import steve from '@graphics/8-steve.png';
+import { avatarFor } from '@/lib/avatar';
 
 // Profile tab, signed in: who you are, your level and XP, and your stats.
 // Data comes from the shared profile in SessionContext.
@@ -36,7 +36,7 @@ export default function ProfileCard() {
     <Card variant="primary" heading="Profile">
       <div className="flex items-center gap-px3">
         <span className="mc-slot">
-          <img src={steve} alt="" />
+          <img src={avatarFor(profile.username)} alt="" />
         </span>
         <div className="flex min-w-0 flex-col gap-px1">
           <span className="mc-stat__value break-words">{profile.username}</span>

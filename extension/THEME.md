@@ -99,7 +99,7 @@ Every token becomes a Tailwind utility: `bg-matcha`, `text-milk-tea`,
 |---|---|---|---|
 | `<Card variant heading>` | `.mc-panel` | `primary` → `--grass` (grass-topped dirt), `secondary` → `--wood` (oak planks), `plain` | any boxed section |
 | `<Button variant size block>` | `.mc-btn` | `primary` (grass), `secondary` (wood), `danger` (redstone), `plain` (dark dirt, e.g. Skip); `sm` / `md` / `lg`; `block` = full width | actions |
-| `<TextInput label error updateValue>` | `.mc-field`, `.mc-input` | `aria-invalid` shows a red edge | text fields (label + error wired up for screen readers) |
+| `<TextInput label error updateValue trailing>` | `.mc-field`, `.mc-input` | `aria-invalid` shows a red edge | text fields (label + error wired up for screen readers); `trailing` puts a button on the same row |
 | `<ProgressBar value label>` | `.mc-bar`, `.mc-bar__fill` | value is 0 to 1 | XP, cleanup progress |
 | n/a | `.mc-status` | `--ok`, `--error`, `--pending` (blinks) | connection / sync state |
 | n/a | `.mc-slot` | holds an `<img>` or text | inventory-style icon or item |
