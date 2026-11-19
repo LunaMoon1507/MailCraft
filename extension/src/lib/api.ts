@@ -2,6 +2,7 @@
 // here so the base URL, headers and (later) the JWT live in one place.
 import { storage } from '#imports';
 import { authToken, isTokenExpiring, refreshAccessToken } from './auth';
+import type { PointsAction } from './points';
 
 export const API_URL: string = import.meta.env.WXT_API_URL ?? 'http://localhost:3000';
 
@@ -73,20 +74,26 @@ export interface ProfileResponse {
 }
 
 export async function getProfile() {
+  let res: Response;
   try {
-    const res = await makeAuthRequest(`${API_URL}/api/profile`, {
+    res = await makeAuthRequest(`${API_URL}/api/profile`, {
       method: "GET",
-    })
-
-    if (res.status === 500) {
-      throw new Error("An unexpected error occurred, please try again.");
+    });
+  }
+  catch (error) {
+    // fetch throws a TypeError when the server can't be reached at all.
+    if (error instanceof TypeError) {
+      throw new Error("Can't reach the server. Check Connections below.");
     }
+    // makeAuthRequest's own errors ("Please log in", "Session expired...") pass through.
+    throw error;
+  }
 
-    return (await res.json()) as ProfileResponse;
+  if (!res.ok) {
+    throw await errorFrom(res, "Couldn't load your profile, please try again.");
   }
-  catch {
-    throw new Error("Please log in to view your profile.");
-  }
+
+  return (await res.json()) as ProfileResponse;
 }
 
 export interface AwardPointsResponse {
@@ -101,7 +108,7 @@ export interface AwardPointsResponse {
 
 // Logs a cleanup action for the logged-in user and returns their updated points.
 // The server works out the user from the login token and the XP from the action.
-export async function awardPoints(actionType: 'ARCHIVE' | 'DELETE' | 'LABEL', count = 1) {
+export async function awardPoints(actionType: PointsAction, count = 1) {
   const res = await makeAuthRequest(`${API_URL}/api/points/action`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -112,4 +119,57 @@ export async function awardPoints(actionType: 'ARCHIVE' | 'DELETE' | 'LABEL', co
     throw new Error(body.error ?? `Awarding points failed: HTTP ${res.status}`);
   }
   return (await res.json()) as AwardPointsResponse;
+}
+
+// ---- Friends ----
+
+export interface FriendSearchResult {
+  username: string;
+  isSelf: boolean;
+  isFriend: boolean;
+}
+
+export interface Friend {
+  username: string;
+  since: string;
+}
+
+// Reads `{ error }` from a failed response so the UI can show the server's message.
+async function errorFrom(res: Response, fallback: string) {
+  const body = await res.json().catch(() => ({}));
+  return new Error(body.error ?? fallback);
+}
+
+// Exact username match. Returns null when no user has that username.
+export async function searchUser(username: string) {
+  const res = await makeAuthRequest(
+    `${API_URL}/api/friends/search?username=${encodeURIComponent(username)}`,
+  );
+  if (res.status === 404) return null;
+  if (!res.ok) throw await errorFrom(res, 'Search failed, please try again.');
+  return (await res.json()) as FriendSearchResult;
+}
+
+export async function getFriends() {
+  const res = await makeAuthRequest(`${API_URL}/api/friends`);
+  if (!res.ok) throw await errorFrom(res, 'Could not load your friends list.');
+  return (await res.json()) as Friend[];
+}
+
+// Adds the user as a friend; the friendship shows up for both people.
+export async function addFriend(username: string) {
+  const res = await makeAuthRequest(`${API_URL}/api/friends`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username }),
+  });
+  if (!res.ok) throw await errorFrom(res, 'Could not add friend, please try again.');
+}
+
+// Unfriends the user for both people.
+export async function removeFriend(username: string) {
+  const res = await makeAuthRequest(`${API_URL}/api/friends/${encodeURIComponent(username)}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw await errorFrom(res, 'Could not remove friend, please try again.');
 }

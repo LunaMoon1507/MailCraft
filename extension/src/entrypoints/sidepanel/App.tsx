@@ -1,38 +1,72 @@
-import { useCallback, useEffect, useState } from 'react';
-import { API_URL, getHealth } from '@/lib/api';
-import Button from '@/components/Button';
-import Card from '@/components/Card';
-import Login from '@/pages/Login';
+import { useEffect, useState } from 'react';
+import { activeTabItem, type TabId } from '@/lib/tabs';
+import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
+import LevelChip from '@/components/LevelChip';
+import TabBar, { type TabItem, panelId, tabId } from '@/components/TabBar';
 import Profile from '@/pages/Profile';
-import OAuth from '@/pages/OAuth';
 import CleanupGame from '@/pages/CleanupGame';
+import Friends from '@/pages/Friends';
 import grassBlock from '@graphics/5-grass.png';
+import steve from '@graphics/8-steve.png';
+import pickaxe from '@graphics/6-pickaxe.png';
+import wolf from '@graphics/23-wolf.png';
 
-type Status =
-  | { kind: 'checking' }
-  | { kind: 'connected'; latencyMs: number }
-  | { kind: 'error'; message: string };
+const LOCKED_REASON = 'Log in to unlock';
 
 export default function App() {
-  const [status, setStatus] = useState<Status>({ kind: 'checking' });
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { profile } = useProfile();
+  const level = profile?.userStats?.level;
 
-  const check = useCallback(async () => {
-    setStatus({ kind: 'checking' });
-    const started = performance.now();
-    try {
-      await getHealth(AbortSignal.timeout(5000));
-      setStatus({ kind: 'connected', latencyMs: Math.round(performance.now() - started) });
-    } catch (error) {
-      setStatus({
-        kind: 'error',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
-    }
-  }, []);
+  // The tab the user last picked (saved in extension storage).
+  const [chosenTab, setChosenTab] = useState<TabId>('profile');
+  const [tabLoaded, setTabLoaded] = useState(false);
 
   useEffect(() => {
-    void check();
-  }, [check]);
+    let active = true;
+    void activeTabItem.getValue().then((saved) => {
+      if (active) {
+        setChosenTab(saved);
+        setTabLoaded(true);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const locked = !isAuthenticated;
+  const tabs: TabItem<TabId>[] = [
+    { id: 'profile', label: 'Profile', icon: steve },
+    { id: 'cleanup', label: 'Cleanup', icon: pickaxe, disabled: locked, disabledReason: LOCKED_REASON },
+    { id: 'friends', label: 'Friends', icon: wolf, disabled: locked, disabledReason: LOCKED_REASON },
+  ];
+
+  // A locked tab (e.g. right after logging out) shows Profile instead, but the
+  // saved choice is kept so the user lands back there after logging in.
+  const activeTab = tabs.find((tab) => tab.id === chosenTab && !tab.disabled)?.id ?? 'profile';
+
+  function selectTab(id: TabId) {
+    setChosenTab(id);
+    void activeTabItem.setValue(id);
+  }
+
+  // Wait for the login state and the saved tab before drawing a panel, so the
+  // side panel doesn't flash Profile (or a "please log in" card) on open.
+  const ready = !authLoading && tabLoaded;
+
+  // Tabs stay mounted (just hidden) once opened, so switching away from
+  // Cleanup and back keeps the loaded emails and session XP. Logging out
+  // unmounts the locked tabs and forgets them.
+  const [visited, setVisited] = useState<ReadonlySet<TabId>>(new Set());
+  useEffect(() => {
+    if (!ready) return;
+    setVisited((current) => {
+      const base = isAuthenticated ? current : new Set<TabId>();
+      return base.has(activeTab) && base === current ? current : new Set(base).add(activeTab);
+    });
+  }, [ready, activeTab, isAuthenticated]);
 
   return (
     <main className="mc-app">
@@ -40,47 +74,40 @@ export default function App() {
         <span className="mc-slot">
           <img src={grassBlock} alt="" />
         </span>
-        <div className="flex flex-col gap-px2">
-          <h1 className="mc-title">MailCraft</h1>
+        <div className="flex min-w-0 flex-1 flex-col gap-px2">
+          <div className="flex items-center justify-between gap-px2">
+            <h1 className="mc-title">MailCraft</h1>
+            {isAuthenticated && level != null && <LevelChip level={level} />}
+          </div>
           <p className="mc-subtitle">Inbox cleanup, block by block.</p>
         </div>
       </header>
 
-      <Card variant="primary" heading="Backend connection">
-        <div className="flex items-center gap-px2" role="status" aria-live="polite">
-          <span
-            aria-hidden="true"
-            className={
-              'mc-status ' +
-              (status.kind === 'connected'
-                ? 'mc-status--ok'
-                : status.kind === 'error'
-                  ? 'mc-status--error'
-                  : 'mc-status--pending')
-            }
-          />
-          <span>
-            {status.kind === 'checking' && 'Checking...'}
-            {status.kind === 'connected' && `Connected (${status.latencyMs} ms)`}
-            {status.kind === 'error' && 'Not connected'}
-          </span>
-        </div>
+      <TabBar
+        label="MailCraft sections"
+        tabs={tabs}
+        active={activeTab}
+        onChange={selectTab}
+        className="sticky top-px1 z-10"
+      />
 
-        {status.kind === 'error' && (
-          <p className="mc-error">
-            {status.message}. Is the backend running at {API_URL}?
-          </p>
-        )}
-        <div>
-          <Button variant="primary" size="sm" onClick={() => void check()} disabled={status.kind === 'checking'}>
-            Check again
-          </Button>
-        </div>
-      </Card>
-      <Login/>
-      <CleanupGame/>
-      <Profile/>
-      <OAuth/>
+      {ready &&
+        tabs
+          .filter((tab) => !tab.disabled && (tab.id === activeTab || visited.has(tab.id)))
+          .map((tab) => (
+            <div
+              key={tab.id}
+              role="tabpanel"
+              id={panelId(tab.id)}
+              aria-labelledby={tabId(tab.id)}
+              hidden={tab.id !== activeTab}
+              className="flex flex-col gap-6"
+            >
+              {tab.id === 'profile' && <Profile />}
+              {tab.id === 'cleanup' && <CleanupGame />}
+              {tab.id === 'friends' && <Friends />}
+            </div>
+          ))}
     </main>
   );
 }

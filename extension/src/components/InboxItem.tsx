@@ -1,67 +1,85 @@
-import { type Email } from "@/lib/gmailApi"
-import { useState } from "react"
-import Card from "./Card"
-import Button from "./Button"
+import { useState } from 'react';
+import Button from '@/components/Button';
+import { type Email } from '@/lib/gmailApi';
+
+export type InboxAction = 'archive' | 'label' | 'trash';
 
 interface InboxItemProps {
-    email: Email
-    trash: (id: string) => Promise<void>,
-    archive: (id: string) => Promise<void>,
-    relabel: (id: string) => Promise<void>,
-    skip: (id: string) => void,
+  email: Email;
+  /** Runs an action; resolves when it has finished (whether it worked or not). */
+  onAction: (action: InboxAction, email: Email) => Promise<void>;
+  onSkip: (email: Email) => void;
 }
 
-export default function InboxItem({email, trash, archive, relabel, skip} : InboxItemProps) {
-    const [archiveLoading, setArchiveLoading] = useState(false);
-    const [relabelLoading, setRelabelLoading] = useState(false);
-    const [trashLoading, setTrashLoading] = useState(false);
+// One inbox email in the Cleanup tab: sender, subject, and an always-visible
+// row of actions (works with keyboard and touch, unlike a hover overlay).
+// While one action runs, the row's other buttons are disabled.
+export default function InboxItem({ email, onAction, onSkip }: InboxItemProps) {
+  const [busy, setBusy] = useState<InboxAction | null>(null);
+  const sender = senderName(email.from);
 
-    const handleArchiveClick = async () => {
-        setArchiveLoading(true);
-        try {
-            const res = await archive(email.id);
-        }
-        finally {
-            setArchiveLoading(false);
-        }
+  async function run(action: InboxAction) {
+    setBusy(action);
+    try {
+      await onAction(action, email);
+    } finally {
+      setBusy(null);
     }
+  }
 
-    const handleRelabelClick = async () => {
-        setRelabelLoading(true);
-        try {
-            const res = await relabel(email.id);
-        }
-        finally {
-            setRelabelLoading(false);
-        }
-    }
+  return (
+    <article className="mc-panel gap-px2 p-px3" aria-busy={busy !== null} aria-label={`Email from ${sender}`}>
+      <span className="mc-label truncate" title={email.from}>
+        {sender}
+      </span>
+      <p className="mc-stat__value break-words">{email.subject || '(no subject)'}</p>
+      <div className="-mx-px1 flex flex-wrap gap-px1">
+        <Button
+          variant="primary"
+          size="sm"
+          loading={busy === 'archive'}
+          disabled={busy !== null}
+          onClick={() => void run('archive')}
+          aria-label={`Archive email from ${sender}`}
+        >
+          Archive
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          loading={busy === 'label'}
+          disabled={busy !== null}
+          onClick={() => void run('label')}
+          aria-label={`Label email from ${sender}`}
+        >
+          Label
+        </Button>
+        <Button
+          variant="danger"
+          size="sm"
+          loading={busy === 'trash'}
+          disabled={busy !== null}
+          onClick={() => void run('trash')}
+          aria-label={`Delete email from ${sender}`}
+        >
+          Delete
+        </Button>
+        <Button
+          variant="plain"
+          size="sm"
+          disabled={busy !== null}
+          onClick={() => onSkip(email)}
+          aria-label={`Skip email from ${sender}`}
+        >
+          Skip
+        </Button>
+      </div>
+    </article>
+  );
+}
 
-    const handleTrashClick = async () => {
-        setTrashLoading(true);
-        try {
-            const res = await trash(email.id);
-        }
-        finally {
-            setTrashLoading(false);
-        }
-    }
-
-    return (
-        <Card variant="plain" className="group relative">
-            <div className="flex flex-col justify-between gap-2 max-w-full">
-                <div className="flex flex-col">
-                    <div className="break-words">{email.subject}</div>
-                    <div className="break-words">{email.from}</div>
-                </div>
-            </div>
-            <div className="absolute inset-0 opacity-0 bg-black/40 group-hover:opacity-100 flex flex-col justify-center">
-                <div className="flex flex-row gap-2 max-h-min justify-center">
-                    <Button variant="primary" size="sm" loading={archiveLoading} onClick={handleArchiveClick}>Archive</Button>
-                    <Button variant="primary" size="sm" loading={relabelLoading} onClick={handleRelabelClick}>Relabel</Button>
-                    <Button variant="danger" size="sm" loading={trashLoading} onClick={handleTrashClick}>Trash</Button>
-                    <Button variant="secondary" size="sm" onClick={()=>skip(email.id)}>Skip</Button>
-                </div> 
-            </div>
-        </Card>
-    )
+// '"UF Bookstore" <noreply@uf.edu>' -> 'UF Bookstore'; a bare address stays as is.
+function senderName(from: string) {
+  const match = from.match(/^\s*"?([^"<]*?)"?\s*<([^>]+)>/);
+  return match?.[1]?.trim() || match?.[2] || from || 'Unknown sender';
 }

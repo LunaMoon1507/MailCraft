@@ -1,15 +1,18 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { login, register } from '@/lib/auth';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
 import TextInput from '@/components/TextInput';
 
-export default function Login () {
+// Profile tab, signed out: create an account or log in.
+// On success the stored token changes, so App swaps this for the profile.
+export default function Login() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [displayLogin, setDisplayLogin] = useState(false);
     const [usernameError, setUsernameError] = useState("");
     const [passwordError, setPasswordError] = useState("");
+    const [busy, setBusy] = useState(false);
 
     const handleSwitchClick = () => {
         setDisplayLogin(!displayLogin);
@@ -17,61 +20,45 @@ export default function Login () {
         setPasswordError("");
     }
 
-    async function handleLogin() {
-        try {
-            await login(username, password);
-        }
-        catch (error) {
-            if (error instanceof Error) {
-                setPasswordError(error.message);
-            } else {
-                setPasswordError("An unexpected error occurred.");
-            }
-        }
-        setUsername("");
-        setPassword("");
-    }
-    async function handleSignup() {
-        if (password) {
-            setPasswordError("");
-        }
-        else {
-            setPasswordError("Password cannot be blank.");
-        }
-        if (username) {
-            setUsernameError("");
-        }
-        else {
-            setUsernameError("Username cannot be blank.");
+    // A <form> so Enter submits from either field.
+    async function handleSubmit(event: FormEvent) {
+        event.preventDefault();
+        const name = username.trim();
+        setUsernameError(name ? "" : "Username cannot be blank.");
+        setPasswordError(password ? "" : "Password cannot be blank.");
+        if (!name || !password) {
+            return;
         }
 
-        if (username && password) {
-            console.log("Sign Up Clicked!");
-            try {
-                await register(username, password);
-            }
-            catch (error) {
-                if (error instanceof Error) {
-                    setPasswordError(error.message);
-                } else {
-                    setPasswordError("An unexpected error occurred.");
-                }
+        setBusy(true);
+        try {
+            if (displayLogin) {
+                await login(name, password);
+            } else {
+                await register(name, password);
             }
         }
-        setUsername("");
-        setPassword("");
+        catch (error) {
+            setPasswordError(error instanceof Error ? error.message : "An unexpected error occurred.");
+            // Keep the username so the user only has to retype the password.
+            setPassword("");
+        }
+        finally {
+            setBusy(false);
+        }
     }
 
     return(
-        <Card variant="secondary" heading={displayLogin ? "Log in" : "Create account"}>
-            <TextInput updateValue={setUsername} value={username} error={usernameError} label="Username" autoComplete="username"/>
-            <TextInput type="password" updateValue={setPassword} value={password} error={passwordError} label="Password" autoComplete={displayLogin ? "current-password" : "new-password"}/>
-            <div className="flex flex-col items-start gap-px3">
-                {displayLogin ?
-                    <Button variant="primary" size="md" block onClick={handleLogin}>Login</Button>
-                    :
-                    <Button variant="primary" size="md" block onClick={handleSignup}>Sign Up</Button>
-                }
+        <Card variant="primary" heading={displayLogin ? "Log in" : "Create account"}>
+            {!displayLogin && <p className="mc-subtitle">Sign up to earn XP for every email you sort.</p>}
+            <form onSubmit={handleSubmit} className="flex flex-col gap-px3" noValidate>
+                <TextInput updateValue={setUsername} value={username} error={usernameError} label="Username" autoComplete="username"/>
+                <TextInput type="password" updateValue={setPassword} value={password} error={passwordError} label="Password" autoComplete={displayLogin ? "current-password" : "new-password"}/>
+                <Button type="submit" variant="primary" size="md" block loading={busy} disabled={busy}>
+                    {displayLogin ? "Log in" : "Sign up"}
+                </Button>
+            </form>
+            <div>
                 <button type="button" className="mc-link" onClick={handleSwitchClick}>
                     {displayLogin ? "No account? Sign up!" : "Already have an account? Log in!"}
                 </button>

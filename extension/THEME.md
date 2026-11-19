@@ -98,14 +98,39 @@ Every token becomes a Tailwind utility: `bg-matcha`, `text-milk-tea`,
 | React | Class | Variants | Use for |
 |---|---|---|---|
 | `<Card variant heading>` | `.mc-panel` | `primary` → `--grass` (grass-topped dirt), `secondary` → `--wood` (oak planks), `plain` | any boxed section |
-| `<Button variant size block>` | `.mc-btn` | `primary` (grass), `secondary` (wood), `danger` (redstone); `sm` / `md` / `lg`; `block` = full width | actions |
-| `<TextInput label error updateValue>` | `.mc-field`, `.mc-input` | `aria-invalid` shows a red edge | text fields (label + error wired up for screen readers) |
+| `<Button variant size block>` | `.mc-btn` | `primary` (grass), `secondary` (wood), `danger` (redstone), `plain` (dark dirt, e.g. Skip); `sm` / `md` / `lg`; `block` = full width | actions |
+| `<TextInput label error updateValue trailing>` | `.mc-field`, `.mc-input` | `aria-invalid` shows a red edge | text fields (label + error wired up for screen readers); `trailing` puts a button on the same row |
 | `<ProgressBar value label>` | `.mc-bar`, `.mc-bar__fill` | value is 0 to 1 | XP, cleanup progress |
 | n/a | `.mc-status` | `--ok`, `--error`, `--pending` (blinks) | connection / sync state |
 | n/a | `.mc-slot` | holds an `<img>` or text | inventory-style icon or item |
 | n/a | `.mc-stat`, `.mc-stat__value` | n/a | label ... value rows |
 | n/a | `.mc-title`, `.mc-subtitle`, `.mc-label`, `.mc-level`, `.mc-error`, `.mc-link` | n/a | text styles |
 | n/a | `.mc-app` | n/a | wrapper for a whole screen |
+| `<TabBar tabs active onChange label>` | `.mc-hotbar`, `.mc-tab` | `.mc-tab--active` (selected), `aria-disabled="true"` (locked) | switching side-panel screens (hotbar style) |
+| `<LevelChip level>` | `.mc-chip`, `.mc-chip__value` | n/a | small sunken value box, e.g. the header's `LV 7` |
+| `<Toast message onDone>` | `.mc-toast` | `--error` (redstone), `--level` (planks + green edge) | short pop-up near the top ("+2 XP", "Level up!"); announced via a `role="status"` region |
+| `<CreatableDropdown label items selectedId onChangeId onCreate>` | `.mc-menu`, `.mc-menu__item`, `.mc-menu__note` | `--create` ("+ Create" row), `--current` (chosen option), `aria-selected="true"` (highlighted) | searchable picker under an input (label picker); keyboard: arrows, Enter, Escape |
+| n/a | `.mc-spinner` | n/a | square blinking loading block (used by `Button loading`) |
+
+### Tabs
+
+The side panel has three tabs (Profile, Cleanup, Friends). `App.tsx` renders
+`<TabBar>` and only the active tab's panel. The last tab picked is saved in
+extension storage (`activeTabItem` in `src/lib/tabs.ts`). Locked tabs (Cleanup
+and Friends while signed out) fall back to Profile.
+
+```tsx
+<TabBar
+  label="MailCraft sections"
+  tabs={[{ id: 'profile', label: 'Profile', icon: steve }, ...]}
+  active={activeTab}
+  onChange={selectTab}
+/>
+<div role="tabpanel" id={panelId(activeTab)} aria-labelledby={tabId(activeTab)}>...</div>
+```
+
+Keyboard: only the selected tab is in the Tab order; Left/Right/Home/End
+move between enabled tabs and select them (WAI-ARIA tabs pattern).
 
 Component props have defaults (`variant="primary"`, `size="md"`), and
 `className` is merged, so you can add layout utilities:

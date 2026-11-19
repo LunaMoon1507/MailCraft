@@ -1,7 +1,7 @@
 import { type ComponentProps } from 'react';
 
 // Styling lives in src/assets/theme/components.css (.mc-btn*). See THEME.md.
-export type ButtonVariant = 'primary' | 'secondary' | 'danger';
+export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'plain';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 export interface ButtonProps extends ComponentProps<'button'> {
@@ -12,11 +12,12 @@ export interface ButtonProps extends ComponentProps<'button'> {
   loading?: boolean;
 }
 
-// primary = grass block, secondary = oak planks, danger = redstone
+// primary = grass block, secondary = oak planks, danger = redstone, plain = dark dirt (low-key actions like Skip)
 const variants: Record<ButtonVariant, string> = {
   primary: 'mc-btn--grass',
   secondary: 'mc-btn--wood',
   danger: 'mc-btn--danger',
+  plain: 'mc-btn--plain',
 };
 
 const sizes: Record<ButtonSize, string> = {
@@ -39,13 +40,8 @@ export default function Button({
     .filter(Boolean)
     .join(' ');
   return (
-    <button type={type} className={classes} {...props}>
-      {loading && (
-        <span
-          className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent"
-          aria-hidden="true"
-        />
-      )}
+    <button type={type} className={classes} aria-busy={loading || undefined} {...props}>
+      {loading && <span className="mc-spinner" aria-hidden="true" />}
       {children}
     </button>
   );
