@@ -28,7 +28,12 @@
   .mc-input,
   .mc-status,
   .mc-slot,
-  .mc-bar {
+  .mc-bar,
+  .mc-hotbar,
+  .mc-tab,
+  .mc-chip,
+  .mc-toast,
+  .mc-menu {
     --mc-face: var(--color-surface);
     --mc-light: var(--color-surface-raised);
     --mc-dark: var(--color-outline);
@@ -47,7 +52,10 @@
   .mc-bevel--inset,
   .mc-input,
   .mc-slot,
-  .mc-bar {
+  .mc-bar,
+  .mc-hotbar,
+  .mc-chip,
+  .mc-menu {
     --mc-light: var(--color-outline);
     --mc-dark: var(--color-surface-raised);
   }
@@ -361,5 +369,144 @@
       var(--color-outline) calc(10% - var(--px) / 2) 10%
     );
     pointer-events: none;
+  }
+
+  /* ---------------------------------------------------------------- hotbar */
+  /* Tab bar drawn like the in-game hotbar: a sunken bedrock well holding one
+     slot per tab. Rendered by <TabBar>. */
+  .mc-hotbar {
+    --mc-face: var(--color-outline);
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: calc(var(--px) * 3);
+    padding: calc(var(--px) * 3);
+    margin: var(--px);
+  }
+  /* One tab: a raised dirt slot with an icon over a small all-caps label. */
+  .mc-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--px);
+    min-height: calc(var(--px) * 14);
+    padding: calc(var(--px) * 2) var(--px);
+    border: 0;
+    font: inherit;
+    word-spacing: inherit;
+    font-size: var(--text-pixel-sm);
+    line-height: 1;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    text-shadow: var(--mc-text-shadow);
+    cursor: pointer;
+    user-select: none;
+  }
+  .mc-tab > img {
+    width: calc(var(--px) * 7);
+    height: calc(var(--px) * 7);
+    object-fit: contain;
+  }
+  .mc-tab:hover:not([aria-disabled='true']) {
+    color: var(--color-text);
+    filter: brightness(1.12);
+  }
+  /* Selected tab: oak-plank face plus a young-green outline, like the
+     hotbar's selection frame. */
+  .mc-tab--active {
+    --mc-face: var(--color-burma-teak);
+    --mc-light: var(--color-milk-tea);
+    --mc-dark: var(--color-solid-brown);
+    --mc-edge: var(--color-accent);
+    color: var(--color-text);
+  }
+  .mc-tab[aria-disabled='true'] {
+    cursor: not-allowed;
+    filter: grayscale(0.85) brightness(0.7);
+  }
+
+  /* ---------------------------------------------------------------- chip */
+  /* Small sunken box for a short value, e.g. the header's "LV 7". */
+  .mc-chip {
+    --mc-face: var(--color-outline);
+    display: inline-flex;
+    align-items: center;
+    gap: calc(var(--px) * 2);
+    padding: calc(var(--px) * 1.5) calc(var(--px) * 2.5);
+    margin: var(--px);
+    font-size: var(--text-pixel-sm);
+    color: var(--color-text);
+    text-shadow: var(--mc-text-shadow);
+  }
+
+  /* ---------------------------------------------------------------- toast */
+  /* Short pop-up near the top of the panel ("+2 XP", "Level up!").
+     Give it role="status" so screen readers announce it. */
+  .mc-toast {
+    --mc-face: var(--color-grassfield);
+    --mc-light: var(--color-matcha);
+    --mc-dark: var(--color-moss);
+    position: fixed;
+    top: calc(var(--px) * 4);
+    inset-inline: 0;
+    z-index: 50;
+    width: max-content;
+    max-width: calc(100% - var(--px) * 8);
+    margin-inline: auto;
+    padding: calc(var(--px) * 2) calc(var(--px) * 3);
+    font-size: var(--text-pixel-md);
+    color: #fff;
+    text-shadow: var(--mc-text-shadow);
+    pointer-events: none;
+    animation: var(--animate-pop);
+  }
+
+  /* ---------------------------------------------------------------- menu */
+  /* Sunken option list under an input (label picker). */
+  .mc-menu {
+    --mc-face: var(--color-outline);
+    display: flex;
+    flex-direction: column;
+    max-height: calc(var(--px) * 48);
+    margin: var(--px);
+    padding: var(--px);
+    overflow-y: auto;
+    list-style: none;
+  }
+  .mc-menu__item {
+    display: block;
+    width: 100%;
+    padding: calc(var(--px) * 2) calc(var(--px) * 3);
+    border: 0;
+    background: none;
+    font: inherit;
+    word-spacing: inherit;
+    font-size: var(--text-pixel-sm);
+    text-align: left;
+    color: var(--color-text);
+    text-shadow: var(--mc-text-shadow);
+    cursor: pointer;
+  }
+  .mc-menu__item:hover,
+  .mc-menu__item[aria-selected='true'] {
+    background-color: var(--color-surface-raised);
+  }
+  /* The "+ Create ..." row. */
+  .mc-menu__item--create {
+    color: var(--color-accent);
+  }
+
+  /* ---------------------------------------------------------------- spinner */
+  /* Square blinking block for loading states (Button `loading`). */
+  .mc-spinner {
+    display: inline-block;
+    flex: none;
+    width: calc(var(--px) * 3);
+    height: calc(var(--px) * 3);
+    background-color: currentColor;
+    box-shadow: inset calc(var(--px) * -1) calc(var(--px) * -1) 0 var(--color-outline);
+    animation: var(--animate-blink);
   }
 }

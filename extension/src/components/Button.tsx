@@ -39,13 +39,8 @@ export default function Button({
     .filter(Boolean)
     .join(' ');
   return (
-    <button type={type} className={classes} {...props}>
-      {loading && (
-        <span
-          className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent"
-          aria-hidden="true"
-        />
-      )}
+    <button type={type} className={classes} aria-busy={loading || undefined} {...props}>
+      {loading && <span className="mc-spinner" aria-hidden="true" />}
       {children}
     </button>
   );
