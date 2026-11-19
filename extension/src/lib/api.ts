@@ -73,20 +73,26 @@ export interface ProfileResponse {
 }
 
 export async function getProfile() {
+  let res: Response;
   try {
-    const res = await makeAuthRequest(`${API_URL}/api/profile`, {
+    res = await makeAuthRequest(`${API_URL}/api/profile`, {
       method: "GET",
-    })
-
-    if (res.status === 500) {
-      throw new Error("An unexpected error occurred, please try again.");
+    });
+  }
+  catch (error) {
+    // fetch throws a TypeError when the server can't be reached at all.
+    if (error instanceof TypeError) {
+      throw new Error("Can't reach the server. Check Connections below.");
     }
+    // makeAuthRequest's own errors ("Please log in", "Session expired...") pass through.
+    throw error;
+  }
 
-    return (await res.json()) as ProfileResponse;
+  if (!res.ok) {
+    throw await errorFrom(res, "Couldn't load your profile, please try again.");
   }
-  catch {
-    throw new Error("Please log in to view your profile.");
-  }
+
+  return (await res.json()) as ProfileResponse;
 }
 
 export interface AwardPointsResponse {

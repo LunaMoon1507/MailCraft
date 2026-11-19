@@ -1,16 +1,10 @@
 import { useEffect, useState } from 'react';
-import { API_URL } from '@/lib/api';
 import { activeTabItem, type TabId } from '@/lib/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
-import { useServerHealth } from '@/hooks/useServerHealth';
-import Button from '@/components/Button';
-import Card from '@/components/Card';
 import LevelChip from '@/components/LevelChip';
 import TabBar, { type TabItem, panelId, tabId } from '@/components/TabBar';
-import Login from '@/pages/Login';
 import Profile from '@/pages/Profile';
-import OAuth from '@/pages/OAuth';
 import CleanupGame from '@/pages/CleanupGame';
 import Friends from '@/pages/Friends';
 import grassBlock from '@graphics/5-grass.png';
@@ -21,7 +15,6 @@ import wolf from '@graphics/23-wolf.png';
 const LOCKED_REASON = 'Log in to unlock';
 
 export default function App() {
-  const { status, check } = useServerHealth();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { profile } = useProfile();
   const level = profile?.userStats?.level;
@@ -93,50 +86,7 @@ export default function App() {
           aria-labelledby={tabId(activeTab)}
           className="flex flex-col gap-6"
         >
-          {activeTab === 'profile' && (
-            <>
-              {isAuthenticated ? <Profile /> : <Login />}
-
-              <Card variant="secondary" heading="Backend connection">
-                <div className="flex items-center gap-px2" role="status" aria-live="polite">
-                  <span
-                    aria-hidden="true"
-                    className={
-                      'mc-status ' +
-                      (status.kind === 'connected'
-                        ? 'mc-status--ok'
-                        : status.kind === 'error'
-                          ? 'mc-status--error'
-                          : 'mc-status--pending')
-                    }
-                  />
-                  <span>
-                    {status.kind === 'checking' && 'Checking...'}
-                    {status.kind === 'connected' && `Connected (${status.latencyMs} ms)`}
-                    {status.kind === 'error' && 'Not connected'}
-                  </span>
-                </div>
-
-                {status.kind === 'error' && (
-                  <p className="mc-error">
-                    {status.message}. Is the backend running at {API_URL}?
-                  </p>
-                )}
-                <div>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => void check()}
-                    disabled={status.kind === 'checking'}
-                  >
-                    Check again
-                  </Button>
-                </div>
-              </Card>
-
-              <OAuth />
-            </>
-          )}
+          {activeTab === 'profile' && <Profile />}
           {activeTab === 'cleanup' && <CleanupGame />}
           {activeTab === 'friends' && <Friends />}
         </div>
