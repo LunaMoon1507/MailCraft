@@ -440,6 +440,12 @@
     color: var(--color-text);
     text-shadow: var(--mc-text-shadow);
   }
+  /* The number in a chip, green like the in-game level. */
+  .mc-chip__value {
+    font-size: var(--text-pixel-md);
+    line-height: 1;
+    color: var(--color-accent);
+  }
 
   /* ---------------------------------------------------------------- toast */
   /* Short pop-up near the top of the panel ("+2 XP", "Level up!").

@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
-import { API_URL, getHealth } from '@/lib/api';
+import { useEffect, useState } from 'react';
+import { API_URL } from '@/lib/api';
 import { activeTabItem, type TabId } from '@/lib/tabs';
 import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
+import { useServerHealth } from '@/hooks/useServerHealth';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
+import LevelChip from '@/components/LevelChip';
 import TabBar, { type TabItem, panelId, tabId } from '@/components/TabBar';
 import Login from '@/pages/Login';
 import Profile from '@/pages/Profile';
@@ -15,38 +18,17 @@ import steve from '@graphics/8-steve.png';
 import pickaxe from '@graphics/6-pickaxe.png';
 import wolf from '@graphics/23-wolf.png';
 
-type Status =
-  | { kind: 'checking' }
-  | { kind: 'connected'; latencyMs: number }
-  | { kind: 'error'; message: string };
-
 const LOCKED_REASON = 'Log in to unlock';
 
 export default function App() {
-  const [status, setStatus] = useState<Status>({ kind: 'checking' });
+  const { status, check } = useServerHealth();
   const { isAuthenticated, loading: authLoading } = useAuth();
+  const { profile } = useProfile();
+  const level = profile?.userStats?.level;
 
   // The tab the user last picked (saved in extension storage).
   const [chosenTab, setChosenTab] = useState<TabId>('profile');
   const [tabLoaded, setTabLoaded] = useState(false);
-
-  const check = useCallback(async () => {
-    setStatus({ kind: 'checking' });
-    const started = performance.now();
-    try {
-      await getHealth(AbortSignal.timeout(5000));
-      setStatus({ kind: 'connected', latencyMs: Math.round(performance.now() - started) });
-    } catch (error) {
-      setStatus({
-        kind: 'error',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    void check();
-  }, [check]);
 
   useEffect(() => {
     let active = true;
@@ -87,8 +69,11 @@ export default function App() {
         <span className="mc-slot">
           <img src={grassBlock} alt="" />
         </span>
-        <div className="flex flex-col gap-px2">
-          <h1 className="mc-title">MailCraft</h1>
+        <div className="flex min-w-0 flex-1 flex-col gap-px2">
+          <div className="flex items-center justify-between gap-px2">
+            <h1 className="mc-title">MailCraft</h1>
+            {isAuthenticated && level != null && <LevelChip level={level} />}
+          </div>
           <p className="mc-subtitle">Inbox cleanup, block by block.</p>
         </div>
       </header>

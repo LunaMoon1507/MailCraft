@@ -5,9 +5,11 @@ import { CreatableDropdown } from "@/components/CreatableDropdown";
 import { getEmails, getLabels, createLabel, type Email, type Label, trashEmail, relabelEmail, archiveEmail } from "@/lib/gmailApi";
 import { awardPoints } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
 
 export default function CleanupGame() {
     const {isAuthenticated} = useAuth();
+    const { reload: reloadProfile } = useProfile();
 
     const [emails, setEmails] = useState<Email[]>([]);
     const [labels, setLabels] = useState<Label[]>([]);
@@ -56,6 +58,7 @@ export default function CleanupGame() {
                 const points = await awardPoints("DELETE");
                 setPopupMessage(`+${points.awardedPoints} xp`)
                 removeEmailFromList(id);
+                void reloadProfile(); // updates the header's level chip
             }
             catch {
                 console.log("Error when awarding points")
@@ -78,6 +81,7 @@ export default function CleanupGame() {
                 const points = await awardPoints("LABEL");
                 setPopupMessage(`+${points.awardedPoints} xp`)
                 removeEmailFromList(id);
+                void reloadProfile(); // updates the header's level chip
             }
             catch {
                 console.log("Error when awarding points")
@@ -95,6 +99,7 @@ export default function CleanupGame() {
                 const points = await awardPoints("ARCHIVE");
                 setPopupMessage(`+${points.awardedPoints} xp`)
                 removeEmailFromList(id);
+                void reloadProfile(); // updates the header's level chip
             }
             catch {
                 console.log("Error when awarding points")

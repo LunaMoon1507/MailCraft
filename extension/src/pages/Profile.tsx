@@ -1,68 +1,40 @@
 import Card from "@/components/Card";
-import { useAuth } from "@/hooks/useAuth";
-import { useState, useEffect } from "react";
-import { type ProfileResponse, getProfile, awardPoints } from "@/lib/api";
+import { awardPoints } from "@/lib/api";
 import { logout } from "@/lib/auth";
+import { useProfile } from "@/hooks/useProfile";
 import Button from "@/components/Button";
 import ProgressBar from "@/components/ProgressBar";
 
+// Shown only while logged in (App.tsx renders <Login> otherwise).
+// The profile itself is loaded once in SessionContext and shared app-wide.
 export default function Profile() {
-    const [info, setInfo] = useState<ProfileResponse>();
-    const [message, setMessage] = useState("");
-    const {token, isAuthenticated, loading} = useAuth();
+    const { profile, loading, error, reload } = useProfile();
 
-    const stats = info?.userStats;
+    const stats = profile?.userStats;
     const xp = stats ? levelProgress(stats.xp) : null;
-
-    async function loadProfile() {
-        try {
-            const profileInfo = await getProfile();
-            console.log("got profile")
-            setInfo(profileInfo);
-            setMessage(`Welcome, ${profileInfo.username}!`)
-        }
-        catch (error) {
-            console.log("error when getting profile")
-            if (error instanceof Error) {
-                setMessage(error.message);
-            }
-        }
-    }
-
+    const message = profile ? `Welcome, ${profile.username}!` : error;
 
     // test that the points work
     async function testPoints() {
         try {
             await awardPoints("DELETE");
-            loadProfile();
+            await reload();
         }
         catch (error) {
             console.log(error)
         }
     }
 
-    useEffect(()=> {
-        loadProfile();
-    }, [token, isAuthenticated])
-
+    // Clearing the stored token logs out everywhere: useAuth sees it and the
+    // shared profile is cleared automatically.
     const handleLogout = () => {
-        logout();
-        setInfo(undefined);
-        setMessage("");
+        void logout();
     }
 
-    if (loading) {
+    if (!profile && loading) {
         return (
             <Card variant='primary'>
                 <div>Loading...</div>
-            </Card>
-        )
-    }
-    
-    if (!isAuthenticated) {
-        return (
-            <Card variant='primary'>
-                <div>Please log in to view your profile.</div>
             </Card>
         )
     }

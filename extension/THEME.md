@@ -107,7 +107,7 @@ Every token becomes a Tailwind utility: `bg-matcha`, `text-milk-tea`,
 | n/a | `.mc-title`, `.mc-subtitle`, `.mc-label`, `.mc-level`, `.mc-error`, `.mc-link` | n/a | text styles |
 | n/a | `.mc-app` | n/a | wrapper for a whole screen |
 | `<TabBar tabs active onChange label>` | `.mc-hotbar`, `.mc-tab` | `.mc-tab--active` (selected), `aria-disabled="true"` (locked) | switching side-panel screens (hotbar style) |
-| n/a | `.mc-chip` | n/a | small sunken value box, e.g. the header's `LV 7` |
+| `<LevelChip level>` | `.mc-chip`, `.mc-chip__value` | n/a | small sunken value box, e.g. the header's `LV 7` |
 | n/a | `.mc-toast` | n/a | short pop-up near the top ("+2 XP"); give it `role="status"` |
 | n/a | `.mc-menu`, `.mc-menu__item` | `.mc-menu__item--create`, `aria-selected="true"` | option list under an input (label picker) |
 | n/a | `.mc-spinner` | n/a | square blinking loading block (used by `Button loading`) |
