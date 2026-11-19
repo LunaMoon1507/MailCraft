@@ -21,8 +21,13 @@ interface EmailRawData {
 
 export interface Label {
     id: string,
-    name: string
+    name: string,
+    // "system" (INBOX, SPAM, CATEGORY_*...) or "user" (labels the user made)
+    type?: "system" | "user",
 }
+
+// How many inbox emails one cleanup batch loads.
+export const BATCH_SIZE = 25;
 
 interface LabelListRawData {
     labels: Label[]
@@ -70,7 +75,7 @@ async function getEmailList() {
 
     const url = new URL("https://gmail.googleapis.com/gmail/v1/users/me/messages");
     const params = { 
-        maxResults: "25", 
+        maxResults: String(BATCH_SIZE),
         includeSpamTrash: "false",
         labelIds: "INBOX",
     };
@@ -110,7 +115,8 @@ async function getEmail(id: string) {
 
 
 async function processEmails(emailList: ListResult) {
-    const promises = emailList.messages.map(async (message) => {
+    // Gmail leaves out `messages` entirely when the inbox is empty.
+    const promises = (emailList.messages ?? []).map(async (message) => {
         const email = await getEmail(message.id)
 
         return email
@@ -153,7 +159,8 @@ export async function getLabels() {
     const data = await labelRes.json() as LabelListRawData;
     const cleaned = data.labels.map((label) => ({
             id: label.id,
-            name: label.name
+            name: label.name,
+            type: label.type,
         })
     ) as Label[];
     console.log(cleaned)

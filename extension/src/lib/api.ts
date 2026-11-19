@@ -2,6 +2,7 @@
 // here so the base URL, headers and (later) the JWT live in one place.
 import { storage } from '#imports';
 import { authToken, isTokenExpiring, refreshAccessToken } from './auth';
+import type { PointsAction } from './points';
 
 export const API_URL: string = import.meta.env.WXT_API_URL ?? 'http://localhost:3000';
 
@@ -107,7 +108,7 @@ export interface AwardPointsResponse {
 
 // Logs a cleanup action for the logged-in user and returns their updated points.
 // The server works out the user from the login token and the XP from the action.
-export async function awardPoints(actionType: 'ARCHIVE' | 'DELETE' | 'LABEL', count = 1) {
+export async function awardPoints(actionType: PointsAction, count = 1) {
   const res = await makeAuthRequest(`${API_URL}/api/points/action`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

@@ -216,6 +216,15 @@
     --mc-ink: #fff;
   }
 
+  /* Dark dirt: low-key actions (Skip). Parchment on soil passes AA. */
+  .mc-btn--plain {
+    --mc-face: var(--color-surface);
+    --mc-light: var(--color-surface-raised);
+    --mc-dark: var(--color-outline);
+    --mc-press-light: var(--color-outline);
+    --mc-press-dark: var(--color-surface-raised);
+  }
+
   /* Sizes: padding is always whole game pixels. */
   .mc-btn--sm {
     padding: calc(var(--px) * 2) calc(var(--px) * 3);
@@ -468,6 +477,20 @@
     pointer-events: none;
     animation: var(--animate-pop);
   }
+  /* Something went wrong (redstone). */
+  .mc-toast--error {
+    --mc-face: var(--color-redstone);
+    --mc-light: #e0574a;
+    --mc-dark: #6e1a12;
+  }
+  /* Level up: oak planks with a young-green edge, like the selected tab. */
+  .mc-toast--level {
+    --mc-face: var(--color-burma-teak);
+    --mc-light: var(--color-milk-tea);
+    --mc-dark: var(--color-solid-brown);
+    --mc-edge: var(--color-accent);
+    color: var(--color-parchment);
+  }
 
   /* ---------------------------------------------------------------- menu */
   /* Sunken option list under an input (label picker). */
@@ -502,6 +525,21 @@
   /* The "+ Create ..." row. */
   .mc-menu__item--create {
     color: var(--color-accent);
+  }
+  /* The option that's currently chosen. */
+  .mc-menu__item--current {
+    color: var(--color-accent);
+  }
+  .mc-menu__item--current::after {
+    content: ' (current)';
+    color: var(--color-text-muted);
+  }
+  /* Plain text inside a menu ("No labels yet", "Creating..."). */
+  .mc-menu__note {
+    padding: calc(var(--px) * 2) calc(var(--px) * 3);
+    font-size: var(--text-pixel-sm);
+    color: var(--color-text-muted);
+    text-shadow: var(--mc-text-shadow);
   }
 
   /* ---------------------------------------------------------------- spinner */

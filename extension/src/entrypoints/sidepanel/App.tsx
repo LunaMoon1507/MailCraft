@@ -56,6 +56,18 @@ export default function App() {
   // side panel doesn't flash Profile (or a "please log in" card) on open.
   const ready = !authLoading && tabLoaded;
 
+  // Tabs stay mounted (just hidden) once opened, so switching away from
+  // Cleanup and back keeps the loaded emails and session XP. Logging out
+  // unmounts the locked tabs and forgets them.
+  const [visited, setVisited] = useState<ReadonlySet<TabId>>(new Set());
+  useEffect(() => {
+    if (!ready) return;
+    setVisited((current) => {
+      const base = isAuthenticated ? current : new Set<TabId>();
+      return base.has(activeTab) && base === current ? current : new Set(base).add(activeTab);
+    });
+  }, [ready, activeTab, isAuthenticated]);
+
   return (
     <main className="mc-app">
       <header className="flex items-center gap-px3">
@@ -79,18 +91,23 @@ export default function App() {
         className="sticky top-px1 z-10"
       />
 
-      {ready && (
-        <div
-          role="tabpanel"
-          id={panelId(activeTab)}
-          aria-labelledby={tabId(activeTab)}
-          className="flex flex-col gap-6"
-        >
-          {activeTab === 'profile' && <Profile />}
-          {activeTab === 'cleanup' && <CleanupGame />}
-          {activeTab === 'friends' && <Friends />}
-        </div>
-      )}
+      {ready &&
+        tabs
+          .filter((tab) => !tab.disabled && (tab.id === activeTab || visited.has(tab.id)))
+          .map((tab) => (
+            <div
+              key={tab.id}
+              role="tabpanel"
+              id={panelId(tab.id)}
+              aria-labelledby={tabId(tab.id)}
+              hidden={tab.id !== activeTab}
+              className="flex flex-col gap-6"
+            >
+              {tab.id === 'profile' && <Profile />}
+              {tab.id === 'cleanup' && <CleanupGame />}
+              {tab.id === 'friends' && <Friends />}
+            </div>
+          ))}
     </main>
   );
 }

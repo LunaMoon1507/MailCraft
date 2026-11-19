@@ -2,6 +2,7 @@ import Card from '@/components/Card';
 import Button from '@/components/Button';
 import ProgressBar from '@/components/ProgressBar';
 import { useProfile } from '@/hooks/useProfile';
+import { levelProgress } from '@/lib/levels';
 import steve from '@graphics/8-steve.png';
 
 // Profile tab, signed in: who you are, your level and XP, and your stats.
@@ -80,13 +81,4 @@ function Stat({ label, value }: { label: string; value: string | number }) {
 
 function plural(count: number, word: string) {
   return `${count} ${word}${count === 1 ? '' : 's'}`;
-}
-
-// Level formula from README §8: level = floor(sqrt(xp / 10)) + 1,
-// so level L starts at 10 * (L - 1)^2 XP.
-function levelProgress(xp: number) {
-  const level = Math.floor(Math.sqrt(xp / 10)) + 1;
-  const start = 10 * (level - 1) ** 2;
-  const next = 10 * level ** 2;
-  return { into: xp - start, needed: next - start, fraction: (xp - start) / (next - start) };
 }

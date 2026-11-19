@@ -1,7 +1,7 @@
 import { type ComponentProps } from 'react';
 
 // Styling lives in src/assets/theme/components.css (.mc-btn*). See THEME.md.
-export type ButtonVariant = 'primary' | 'secondary' | 'danger';
+export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'plain';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 export interface ButtonProps extends ComponentProps<'button'> {
@@ -12,11 +12,12 @@ export interface ButtonProps extends ComponentProps<'button'> {
   loading?: boolean;
 }
 
-// primary = grass block, secondary = oak planks, danger = redstone
+// primary = grass block, secondary = oak planks, danger = redstone, plain = dark dirt (low-key actions like Skip)
 const variants: Record<ButtonVariant, string> = {
   primary: 'mc-btn--grass',
   secondary: 'mc-btn--wood',
   danger: 'mc-btn--danger',
+  plain: 'mc-btn--plain',
 };
 
 const sizes: Record<ButtonSize, string> = {
