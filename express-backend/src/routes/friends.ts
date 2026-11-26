@@ -28,10 +28,10 @@ friendsRouter.get('/', async (req: Request, res: Response) => {
     try {
         const rows = await prisma.friendship.findMany({
             where: { user_id: me.id },
-            select: { created_at: true, friend: { select: { username: true } } },
+            select: { created_at: true, friend: { select: { username: true, equipped_avatar: true } } },
             orderBy: { friend: { username: 'asc' } },
         });
-        return res.json(rows.map((row) => ({ username: row.friend.username, since: row.created_at })));
+        return res.json(rows.map((row) => ({ username: row.friend.username, since: row.created_at, avatar: row.friend.equipped_avatar })));
     }
     catch (error) {
         console.error('Error listing friends:', error);
@@ -49,7 +49,7 @@ friendsRouter.get('/search', async (req: Request, res: Response) => {
         return res.status(400).json({ error: 'Enter a username to search for.' });
     }
     try {
-        const user = await prisma.users.findUnique({ where: { username }, select: { id: true, username: true } });
+        const user = await prisma.users.findUnique({ where: { username }, select: { id: true, username: true, equipped_avatar: true } });
         if (!user) {
             return res.status(404).json({ error: `No user named "${username}".` });
         }
@@ -60,6 +60,7 @@ friendsRouter.get('/search', async (req: Request, res: Response) => {
             username: user.username,
             isSelf: user.id === me.id,
             isFriend: !!existing,
+            avatar: user.equipped_avatar,
         });
     }
     catch (error) {

@@ -131,11 +131,13 @@ export interface FriendSearchResult {
   username: string;
   isSelf: boolean;
   isFriend: boolean;
+  avatar: number;
 }
 
 export interface Friend {
   username: string;
   since: string;
+  avatar: number;
 }
 
 // Reads `{ error }` from a failed response so the UI can show the server's message.
