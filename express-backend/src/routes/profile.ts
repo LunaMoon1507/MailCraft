@@ -12,7 +12,7 @@ profileRouter.get("/", async (_req, res) => {
     }
     try {
         const user = await prisma.users.findUniqueOrThrow({
-            select: {username: true, userStats: true}, where: {username: token.username}});
+            select: {username: true, equipped_avatar: true, userStats: true}, where: {username: token.username}});
         res.json(user);
     }
     catch (error) {
