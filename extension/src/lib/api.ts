@@ -104,6 +104,9 @@ export interface AwardPointsResponse {
   leveledUp: boolean;
   bestDayCount: number;
   bestDayDate: string;
+  currentStreak: number;
+  longestStreak: number;
+  updatedStreak: boolean;
 }
 
 // Logs a cleanup action for the logged-in user and returns their updated points.

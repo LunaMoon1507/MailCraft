@@ -55,6 +55,8 @@ pointsRouter.post('/action', async (req: Request, res: Response) => {
         const startOfToday = new Date(todayDate);
         startOfToday.setUTCHours(0, 0, 0, 0);
 
+        let updateStreak = false;
+
         // No `tx: any` here: letting Prisma type `tx` means a model missing from
         // the generated client is a compile error instead of a runtime crash.
         const result = await prisma.$transaction(async (tx) => {
@@ -107,6 +109,15 @@ pointsRouter.post('/action', async (req: Request, res: Response) => {
                 newBestDate = todayDate;
             }
 
+            let newCurrStreak = stats.current_streak;
+            let newMaxStreak = stats.longest_streak;
+            if (todaysActions.length == 1) {
+                // this was the first email action of the day, so update the streaks
+                newCurrStreak++;
+                newMaxStreak = Math.max(newCurrStreak, newMaxStreak);
+                updateStreak = true;
+            }
+
             // Level follows XP; highest_level never goes down (rewards stay unlocked)
             const newXp = stats.xp + pointsToAdd;
             const newLevel = levelForXp(newXp);
@@ -120,8 +131,10 @@ pointsRouter.post('/action', async (req: Request, res: Response) => {
                     highest_level: Math.max(stats.highest_level, newLevel),
                     best_day_count: newBestCount,
                     best_day_date: newBestDate,
+                    current_streak: newCurrStreak,
+                    longest_streak: newMaxStreak
                 },
-                select: { user_id: true, xp: true, level: true, highest_level: true, best_day_count: true, best_day_date: true },
+                select: { user_id: true, xp: true, level: true, highest_level: true, best_day_count: true, best_day_date: true, current_streak: true, longest_streak: true },
             });
             return updatedUser;
         });
@@ -132,7 +145,10 @@ pointsRouter.post('/action', async (req: Request, res: Response) => {
             level: result.level,
             leveledUp: result.level > levelForXp(result.xp - pointsToAdd),
             bestDayCount: result.best_day_count,
-            bestDayDate: result.best_day_date
+            bestDayDate: result.best_day_date,
+            currentStreak: result.current_streak,
+            longestStreak: result.longest_streak,
+            updatedStreak: updateStreak,
         });
     } 
     catch (error: any) {
@@ -172,7 +188,7 @@ pointsRouter.get('/:userId', async (req: Request, res: Response) => {
             userId: stats.user_id.toString(),
             points: typeof stats.xp === 'bigint' ? Number(stats.xp) : (stats.xp ?? 0),
             bestDayCount: stats.best_day_count ?? 0,
-            bestDayDate: stats.best_day_date
+            bestDayDate: stats.best_day_date,
         });
     } catch (error) {
         console.error('Error fetching user points:', error);
