@@ -171,9 +171,14 @@ function CleanupBoard() {
       setSessionXp((xp) => xp + result.awardedPoints);
       if (result.leveledUp) {
         showToast(`Level up! LV ${result.level}`, 'level');
-      } else {
+      }
+      else if (result.updatedStreak) {
+        showToast(`Streak: ${result.currentStreak}`);
+      }
+      else {
         showToast(`+${result.awardedPoints} XP`);
       }
+
       void reloadProfile(); // updates the header's level chip
     } catch {
       showToast(`${spec.done}, but XP couldn't be saved`, 'error');

@@ -128,7 +128,7 @@ export default function Friends() {
             role="status"
             aria-label={`Search result: ${result.username}`}
           >
-            <Avatar username={result.username} />
+            <Avatar username={result.username} icon={result.avatar} />
             <span className="mc-stat__value min-w-0 flex-1 break-words">{result.username}</span>
             {result.isSelf ? (
               <span className="mc-label">That's you</span>
@@ -169,10 +169,10 @@ export default function Friends() {
   );
 }
 
-function Avatar({ username }: { username: string }) {
+function Avatar({ username, icon }: { username: string, icon: number }) {
   return (
     <span className="mc-slot h-10 w-10">
-      <img src={avatarFor(username)} alt="" />
+      <img src={avatarFor(icon)} alt="" />
     </span>
   );
 }
@@ -200,7 +200,7 @@ function FriendRow({ friend, disabled, onRemove }: { friend: Friend; disabled: b
 
   return (
     <li className="mc-stat items-center">
-      <Avatar username={friend.username} />
+      <Avatar username={friend.username} icon={friend.avatar} />
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="mc-stat__value break-words">{friend.username}</span>
         <span className="mc-label">Friends since {formatSince(friend.since)}</span>

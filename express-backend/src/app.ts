@@ -8,6 +8,7 @@ import { pointsRouter } from './routes/points.js';
 import { authRouter } from './routes/auth.js';
 import { profileRouter } from './routes/profile.js';
 import { friendsRouter } from './routes/friends.js';
+import { avatarRouter } from './routes/avatar.js';
 
 export function createApp() {
   (BigInt.prototype as any).toJSON = function () {
@@ -28,6 +29,7 @@ export function createApp() {
   app.use('/api/auth', authRouter);
   app.use('/api/profile', profileRouter);
   app.use('/api/friends', friendsRouter);
+  app.use('/api/avatar', avatarRouter);
 
   return app;
 }

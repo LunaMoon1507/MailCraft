@@ -1,6 +1,7 @@
 import Button from '@/components/Button';
 import ConnectionsCard from '@/components/ConnectionsCard';
 import ProfileCard from '@/components/ProfileCard';
+import AvatarSelect from '@/components/AvatarSelect';
 import Login from '@/pages/Login';
 import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/lib/auth';
@@ -14,6 +15,7 @@ export default function Profile() {
   return (
     <>
       {isAuthenticated ? <ProfileCard /> : <Login />}
+      {isAuthenticated && <AvatarSelect />}
       <ConnectionsCard />
       {isAuthenticated && (
         <div>

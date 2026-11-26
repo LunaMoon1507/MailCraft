@@ -36,7 +36,7 @@ export default function ProfileCard() {
     <Card variant="primary" heading="Profile">
       <div className="flex items-center gap-px3">
         <span className="mc-slot">
-          <img src={avatarFor(profile.username)} alt="" />
+          <img src={avatarFor(profile.equipped_avatar)} alt="" />
         </span>
         <div className="flex min-w-0 flex-col gap-px1">
           <span className="mc-stat__value break-words">{profile.username}</span>

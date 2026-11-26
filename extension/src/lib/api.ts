@@ -60,6 +60,7 @@ async function makeAuthRequest(url: string, options: RequestInit = {}) {
 // update as needed, created for testing purposes
 export interface ProfileResponse {
   username: string,
+  equipped_avatar: number,
   userStats: {
     level: number;
     xp: number;
@@ -104,6 +105,9 @@ export interface AwardPointsResponse {
   leveledUp: boolean;
   bestDayCount: number;
   bestDayDate: string;
+  currentStreak: number;
+  longestStreak: number;
+  updatedStreak: boolean;
 }
 
 // Logs a cleanup action for the logged-in user and returns their updated points.
@@ -127,11 +131,13 @@ export interface FriendSearchResult {
   username: string;
   isSelf: boolean;
   isFriend: boolean;
+  avatar: number;
 }
 
 export interface Friend {
   username: string;
   since: string;
+  avatar: number;
 }
 
 // Reads `{ error }` from a failed response so the UI can show the server's message.
@@ -172,4 +178,14 @@ export async function removeFriend(username: string) {
     method: 'DELETE',
   });
   if (!res.ok) throw await errorFrom(res, 'Could not remove friend, please try again.');
+}
+
+export async function updateAvatar(newAvatar: number) {
+  const res = await makeAuthRequest(`${API_URL}/api/avatar`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({newAvatar: newAvatar})
+  })
 }

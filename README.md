@@ -318,11 +318,6 @@ Tables in **bold** without code font are planned and not created yet.
   can't earn XP twice
 - *Stores only metadata about the action, never email content*
 
-**Reward** (seed data, one per level)
-- id, level_required (unique), name, description, type (e.g. character, block
-  skin, title), icon
-- No per-user table: a reward is unlocked when `highest_level >= level_required`
-
 **SenderCatalog** (seed data, 100+ rows)
 - id, domain (unique), display_name, category (newsletter/promotions/social/notifications)
 
@@ -346,8 +341,7 @@ Tables in **bold** without code font are planned and not created yet.
 | `/api/profile` | GET | Fetch stats, level, achievements (also settles any unsettled days) |
 | `/api/actions` | POST | Log a cleanup action `{type, threadId, fromBulkSender}`, then award XP, check achievement unlocks, and update streak and high score. **The client never sends an XP amount.** |
 | `/api/achievements` | GET | List all achievements + unlock status |
-| `/api/rewards` | GET | List all level rewards + unlocked status + which one is equipped |
-| `/api/rewards/equipped` | PUT | Equip an unlocked reward `{rewardId}` (server rejects locked ones) |
+| `/api/avatar` | POST | Update the equipped avatar |
 | `/api/senders` | GET | Bulk-sender catalog (cached by the extension to tag the queue) |
 | `/api/snapshots` | POST | Record end-of-day inbox unread count `{day, unreadCount}` |
 | `/api/friends` | GET / POST | List friends / send a friend request by username |
@@ -385,7 +379,7 @@ reports what happened.
 - **XP per action:** archive = 2xp, trash = 1xp, label = 1xp
   - "Delete" in the UI moves the thread to Gmail Trash (recoverable for 30
     days). Permanent deletion would require the full `mail.google.com` scope.
-- **Streaks:** a streak day is a **calendar day in the user's time zone** with at
+- **Streaks:** a streak day is a **calendar day in the server time zone** with at
   least one XP-earning action. Missing a full calendar day resets
   `current_streak` to 0. (Replaces the earlier "24H with no XP gain" rule,
   which conflicted with the daily-session rule.)
@@ -396,8 +390,7 @@ reports what happened.
 - **Levels:** `level = floor(sqrt(xp / 10)) + 1`, which gives level 1 at 0 XP,
   level 2 at 10 XP, level 4 at 90 XP and level 11 at 1,000 XP. (Replaces `10(log(xp)+9)`, which gave level 90 at
   1 XP and was undefined at 0 XP.)
-- **Level rewards:** every level unlocks one new reward (a character, block
-  skin, title, etc.) from the `Reward` table. Nothing is spent: XP is only a
+- **Level rewards:** every level until level 11 unlocks a new avatar. Nothing is spent: XP is only a
   progress measure, and unlocking is automatic on level-up.
   - Unlocks use `highest_level`, so a reward stays unlocked even if
     end-of-day penalties later drop the user's XP and level.

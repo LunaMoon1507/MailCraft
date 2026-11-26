@@ -33,16 +33,17 @@ model userStats {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model users {
-  id            BigInt         @id @default(autoincrement())
-  created_at    DateTime       @default(now()) @db.Timestamp(6)
-  email         String?        @unique
-  username      String         @unique
-  password_hash String
-  timezone      String
-  pointHistory  PointHistory[]
-  friendships   Friendship[]   @relation("Friendship_user")
-  friendOf      Friendship[]   @relation("Friendship_friend")
-  userStats     userStats?
+  id              BigInt         @id @default(autoincrement())
+  created_at      DateTime       @default(now()) @db.Timestamp(6)
+  email           String?        @unique
+  username        String         @unique
+  password_hash   String
+  timezone        String
+  equipped_avatar Int            @default(1) @db.SmallInt
+  friendOf        Friendship[]   @relation("Friendship_friend")
+  friendships     Friendship[]   @relation("Friendship_user")
+  pointHistory    PointHistory[]
+  userStats       userStats?
 }
 
 model PointHistory {
@@ -61,8 +62,8 @@ model Friendship {
   user_id    BigInt
   friend_id  BigInt
   created_at DateTime @default(now()) @db.Timestamp(6)
-  user       users    @relation("Friendship_user", fields: [user_id], references: [id], onDelete: Cascade)
-  friend     users    @relation("Friendship_friend", fields: [friend_id], references: [id], onDelete: Cascade)
+  friend     users    @relation("Friendship_friend", fields: [friend_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user       users    @relation("Friendship_user", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([user_id, friend_id])
   @@index([friend_id])
