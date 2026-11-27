@@ -7,8 +7,10 @@ import { avatarFor } from '@/lib/avatar';
 import {
   type Friend,
   type FriendSearchResult,
+  type LeaderboardEntry,
   addFriend,
   getFriends,
+  getLeaderboard,
   removeFriend,
   searchUser,
 } from '@/lib/api';
@@ -24,6 +26,9 @@ export default function Friends() {
   const [listError, setListError] = useState('');
   const [busy, setBusy] = useState(false);
   const [searching, setSearching] = useState(false);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+ const [leaderboardError, setLeaderboardError] = useState('');
+ const [leaderboardLoading, setLeaderboardLoading] = useState(false);
 
   async function loadFriends() {
     try {
@@ -34,16 +39,44 @@ export default function Friends() {
     }
   }
 
+  async function loadLeaderboard() {
+    setLeaderboardLoading(true);
+    try {
+      const data = await getLeaderboard();
+      setLeaderboard(data);
+      setLeaderboardError('');
+    } catch (error) {
+      setLeaderboardError(error instanceof Error ? error.message : 'Could not load the leaderboard.');
+    } finally {
+      setLeaderboardLoading(false);
+    }
+  }
+
   // Reload when the user logs in or out (or the token is refreshed).
   useEffect(() => {
     setResult(null);
     setSearchError('');
     if (isAuthenticated) {
       void loadFriends();
+      void loadLeaderboard();
     } else {
       setFriends([]);
+      setLeaderboard([]);
+      setListError('');
+      setLeaderboardError('');
     }
   }, [token, isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) { return; }
+    const handleCleanupUpdate = () => {
+      void loadLeaderboard();
+    };
+    window.addEventListener('MailCraft: cleanup updated', handleCleanupUpdate);
+    return () => {
+      window.removeEventListener('MailCraft: cleanup updated', handleCleanupUpdate);
+    };
+  }, [isAuthenticated]); 
 
   async function handleSearch(event: FormEvent) {
     event.preventDefault();
@@ -77,6 +110,7 @@ export default function Friends() {
       await addFriend(username);
       setResult((current) => (current ? { ...current, isFriend: true } : current));
       await loadFriends();
+      await loadLeaderboard();
     } catch (error) {
       setSearchError(error instanceof Error ? error.message : 'Could not add friend, please try again.');
     } finally {
@@ -92,6 +126,7 @@ export default function Friends() {
         current?.username === username ? { ...current, isFriend: false } : current,
       );
       await loadFriends();
+      await loadLeaderboard();
     } catch (error) {
       setListError(error instanceof Error ? error.message : 'Could not remove friend, please try again.');
     } finally {
@@ -147,6 +182,42 @@ export default function Friends() {
             )}
           </div>
         )}
+      </Card>
+
+      <Card variant="primary" heading="🏆 Friends Leaderboard">
+        {leaderboardError && (<p className="mc-error">{leaderboardError}</p>)}
+        {leaderboardLoading && leaderboard.length === 0 && (<p>Loading leaderboard...</p>)}
+        {!leaderboardLoading && leaderboard.length === 0 && !leaderboardError && (<p>No leaderboard data available yet.</p>)}
+        {leaderboard.length > 0 && (
+          <ol aria-label="Friends leaderboard">
+            {leaderboard.map((entry) => (
+              <li
+                key={entry.userId}
+                className={`mc-stat items-center ${
+                  entry.isCurrentUser ? 'bg-highlight' : ''
+                }`}
+              >
+                <span className="mc-label">#{entry.rank}</span>
+                <Avatar username={entry.username} icon={entry.avatar} />
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="mc-stat__value break-words">{entry.username} {entry.isCurrentUser && ' (You)'}</span>
+                  <span className="mc-label">{entry.emailsCleaned.toLocaleString()} emails cleaned</span>
+                </div>
+
+                {entry.rank === 1 && (<span aria-label="First place">🥇</span>)}
+              </li>
+            ))}
+          </ol>
+        )}
+        <Button
+          variant="primary"
+          size="sm"
+          disabled={leaderboardLoading}
+          loading={leaderboardLoading}
+          onClick={() => void loadLeaderboard()}
+        >
+          Refresh leaderboard
+        </Button>
       </Card>
 
       <Card variant="primary" heading={`Your friends (${friends.length})`}>
