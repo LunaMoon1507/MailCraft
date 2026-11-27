@@ -125,6 +125,32 @@ export async function awardPoints(actionType: PointsAction, count = 1) {
   return (await res.json()) as AwardPointsResponse;
 }
 
+// ---- Leaderboard ----
+
+export interface LeaderboardEntry {
+  userId: string;
+  username: string;
+  avatar: number;
+  emailsCleaned: number;
+  isCurrentUser: boolean;
+  rank: number;
+}
+
+export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
+  const res = await makeAuthRequest(
+    `${API_URL}/api/leaderboard`
+  );
+
+  if (!res.ok) {
+    throw await errorFrom(
+      res,
+      'Could not load the leaderboard.'
+    );
+  }
+
+  return (await res.json()) as LeaderboardEntry[];
+}
+
 // ---- Friends ----
 
 export interface FriendSearchResult {
